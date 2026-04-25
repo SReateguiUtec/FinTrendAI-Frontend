@@ -39,12 +39,15 @@ export function LaserFlowBoxExample() {
 
       <div style={{
         position: 'absolute',
-        top: '50%',
+        top: '49.5%',
         left: '50%',
         transform: 'translate(-50%)',
         width: '86%',
         height: '60%',
         backgroundColor: '#0a0a0a',
+        backgroundImage: 'radial-gradient(circle at center, rgba(212, 175, 55, 0.11) 1px, transparent 1px)',
+        backgroundSize: '16px 16px',
+        backgroundPosition: '0 0',
         borderRadius: '20px',
         border: '2px solid #D4AF37',
         overflow: 'hidden',
@@ -68,7 +71,7 @@ export function LaserFlowBoxExample() {
           <div
             style={{
               position: 'absolute',
-              top: '1.4rem',
+              top: '1.2rem',
               left: 0,
               right: 0,
               padding: '0 0.75rem',
@@ -80,12 +83,12 @@ export function LaserFlowBoxExample() {
             }}
           >
             <p
+              className="text-[0.65rem] md:text-[0.95rem]"
               style={{
                 margin: 0,
                 maxWidth: 'min(42rem, 100%)',
                 textAlign: 'center',
                 fontFamily: "'Share Tech Mono', ui-monospace, monospace",
-                fontSize: 'clamp(0.68rem, 1.35vw, 0.82rem)',
                 fontWeight: 500,
                 letterSpacing: '0.06em',
                 lineHeight: 1.45,
@@ -93,7 +96,7 @@ export function LaserFlowBoxExample() {
                 textWrap: 'balance',
               }}
             >
-              Fintrend analiza todo el mercado y te da recomendaciones claras.
+              Fintrend analiza el mercado y te da recomendaciones para tu inversión.
             </p>
           </div>
           <div aria-hidden style={{ position: 'relative', zIndex: 2 }}>
