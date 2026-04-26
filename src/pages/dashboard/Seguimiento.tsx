@@ -22,16 +22,21 @@ const Skeleton = ({ className }: { className?: string }) => (
 );
 
 /* ── Mini sparkline ───────────────────────────────────────── */
-const Sparkline = ({ data }: { data: number[] }) => {
+const Sparkline = ({
+  data,
+  compact,
+  positive,
+}: { data: number[]; compact?: boolean; positive?: boolean }) => {
   if (data.length < 2) return null;
   const min = Math.min(...data);
   const max = Math.max(...data);
   const range = max - min || 1;
-  const W = 64, H = 24;
+  const W = compact ? 80 : 64;
+  const H = compact ? 28 : 24;
   const points = data
     .map((v, i) => `${(i / (data.length - 1)) * W},${H - ((v - min) / range) * H}`)
     .join(' ');
-  const isUp = data[data.length - 1] >= data[0];
+  const isUp = positive !== undefined ? positive : data[data.length - 1] >= data[0];
   return (
     <svg width={W} height={H} className="overflow-visible">
       <polyline
@@ -71,9 +76,12 @@ export const Seguimiento = () => {
   const [msgValidacion, setMsgValidacion] = useState('');
   const [showSugerencias, setShowSugerencias] = useState(false);
 
-  /* Búsqueda + paginación de portafolios */
+  /* Búsqueda + paginación de portafolios (server-side) */
   const [busquedaPf, setBusquedaPf] = useState('');
+  const [busquedaPfDebounced, setBusquedaPfDebounced] = useState('');
   const [paginaPf, setPaginaPf] = useState(0);
+  const [totalPfServer, setTotalPfServer] = useState(0);
+  const [totalPaginasPf, setTotalPaginasPf] = useState(1);
   const PF_POR_PAGINA = 5;
 
   /* Paginación de favoritos (watchlist) */
@@ -89,18 +97,41 @@ export const Seguimiento = () => {
 
   const [error, setError] = useState<string | null>(null);
 
-  /* ── Carga inicial: portafolios + catálogo de símbolos ── */
-  const fetchPortafolios = useCallback(async () => {
+  /* ── Carga inicial: catálogo de símbolos (una sola vez) ── */
+  useEffect(() => {
+    getSimbolos().then(setCatalogo).catch(() => {});
+  }, []);
+
+  /* ── Debounce de búsqueda de portafolios (300 ms) ── */
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setBusquedaPfDebounced(busquedaPf);
+      setPaginaPf(0);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [busquedaPf]);
+
+  /* ── Carga de portafolios: server-side (página + búsqueda) ── */
+  const fetchPortafolios = useCallback(async (page: number, search: string) => {
     setLoadingPf(true);
     try {
       setError(null);
-      const [pfs, cats] = await Promise.all([getPortafolios(), getSimbolos()]);
-      setPortafolios(pfs);
-      setCatalogo(cats);
-      /* Los DEFAULT_PF_COUNT portafolios con menor ID son los del seed — protegerlos */
-      const sorted = [...pfs].sort((a, b) => a.id - b.id);
-      setDefaultPfIds(new Set(sorted.slice(0, DEFAULT_PF_COUNT).map(p => p.id)));
-      if (pfs.length > 0 && !portafolioSel) setPortafolioSel(pfs[0]);
+      const res = await getPortafolios(page + 1, PF_POR_PAGINA, search);
+      setPortafolios(res.portafolios);
+      setTotalPfServer(res.total);
+      setTotalPaginasPf(res.pages);
+      /* Identificar defaults solo en la primera carga (sin búsqueda, página 0) */
+      if (page === 0 && !search) {
+        const sorted = [...res.portafolios].sort((a, b) => a.id - b.id);
+        setDefaultPfIds(prev =>
+          prev.size === 0
+            ? new Set(sorted.slice(0, DEFAULT_PF_COUNT).map(p => p.id))
+            : prev
+        );
+      }
+      if (!portafolioSel && res.portafolios.length > 0) {
+        setPortafolioSel(res.portafolios[0]);
+      }
     } catch {
       setError('No pudimos cargar los portafolios. Revisa tu conexión y vuelve a intentar.');
     } finally {
@@ -108,17 +139,14 @@ export const Seguimiento = () => {
     }
   }, [portafolioSel]);
 
-  useEffect(() => { fetchPortafolios(); }, []);
+  useEffect(() => {
+    fetchPortafolios(paginaPf, busquedaPfDebounced);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paginaPf, busquedaPfDebounced]);
 
-  /* Resetear página al cambiar búsqueda */
-  useEffect(() => { setPaginaPf(0); }, [busquedaPf]);
-
-  /* Portafolios filtrados + paginados */
-  const pfFiltrados = portafolios.filter(p =>
-    p.nombre.toLowerCase().includes(busquedaPf.toLowerCase())
-  );
-  const totalPaginas = Math.ceil(pfFiltrados.length / PF_POR_PAGINA);
-  const pfPagina = pfFiltrados.slice(paginaPf * PF_POR_PAGINA, (paginaPf + 1) * PF_POR_PAGINA);
+  /* Portafolios ya vienen paginados del servidor */
+  const pfPagina = portafolios;
+  const pfFiltradosTotal = totalPfServer;
 
   /* Favoritos paginados */
   const totalPagsFav = Math.ceil(favoritos.length / FAV_POR_PAGINA);
@@ -132,35 +160,55 @@ export const Seguimiento = () => {
     setFavoritos([]);
     setPrecios({});
     setSparklines({});
-    setPaginaFav(0); // reset paginación al cambiar portafolio
+    setPaginaFav(0);
 
     getFavoritos(portafolioSel.id)
-      .then(async (favs) => {
+      .then(favs => {
         setError(null);
         setFavoritos(favs);
-        const preciosMap: Record<string, PrecioAccion | null> = {};
-        const sparksMap: Record<string, number[]> = {};
-        await Promise.all(favs.map(async (f) => {
-          try {
-            const [ultimo, hist] = await Promise.all([
-              getUltimoPrecio(f.simbolo),
-              getPrecios(f.simbolo).catch(() => [] as PrecioAccion[]),
-            ]);
-            preciosMap[f.simbolo] = ultimo;
-            sparksMap[f.simbolo] = hist.slice(-20).map((p: PrecioAccion) => Number(p.close));
-          } catch {
-            preciosMap[f.simbolo] = null;
-            sparksMap[f.simbolo] = [];
-          }
-        }));
-        setPrecios(preciosMap);
-        setSparklines(sparksMap);
       })
       .catch(() => {
         setError('No pudimos cargar los favoritos. Vuelve a intentar.');
       })
       .finally(() => setLoadingFav(false));
   }, [portafolioSel]);
+
+  /* ── Carga lazy de precios: solo para la página visible ── */
+  useEffect(() => {
+    if (favoritos.length === 0) return;
+
+    const inicio = paginaFav * FAV_POR_PAGINA;
+    const favsPagina = favoritos.slice(inicio, inicio + FAV_POR_PAGINA);
+
+    // Solo pedir los que aún no están en caché
+    const pendientes = favsPagina.filter(f => !(f.simbolo in precios));
+    if (pendientes.length === 0) return;
+
+    Promise.all(
+      pendientes.map(async (f) => {
+        try {
+          const [ultimo, hist] = await Promise.all([
+            getUltimoPrecio(f.simbolo),
+            getPrecios(f.simbolo).catch(() => [] as PrecioAccion[]),
+          ]);
+          return {
+            simbolo: f.simbolo,
+            precio: ultimo,
+            spark: hist.slice(-20).map((p: PrecioAccion) => Number(p.close)),
+          };
+        } catch {
+          return { simbolo: f.simbolo, precio: null, spark: [] };
+        }
+      })
+    ).then(results => {
+      const pm: Record<string, PrecioAccion | null> = {};
+      const sm: Record<string, number[]> = {};
+      results.forEach(r => { pm[r.simbolo] = r.precio; sm[r.simbolo] = r.spark; });
+      setPrecios(prev => ({ ...prev, ...pm }));
+      setSparklines(prev => ({ ...prev, ...sm }));
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paginaFav, favoritos]);
 
   /* ── Filtrar sugerencias mientras el usuario escribe ── */
   useEffect(() => {
@@ -239,7 +287,7 @@ export const Seguimiento = () => {
       await deletePortafolio(id);
       setConfirmDeleteId(null);
       if (portafolioSel?.id === id) setPortafolioSel(null);
-      await fetchPortafolios();
+      await fetchPortafolios(paginaPf, busquedaPfDebounced);
     } catch { /* ignore */ }
   };
 
@@ -250,7 +298,7 @@ export const Seguimiento = () => {
     try {
       await createPortafolio(nuevoNombre.trim());
       setNuevoNombre('');
-      await fetchPortafolios();
+      await fetchPortafolios(paginaPf, busquedaPfDebounced);
     } catch { /* ignore */ } finally {
       setCreando(false);
     }
@@ -285,7 +333,7 @@ export const Seguimiento = () => {
   };
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-4 sm:p-8 space-y-6 sm:space-y-8">
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -321,7 +369,7 @@ export const Seguimiento = () => {
             <h2 className="text-xs text-zinc-500 uppercase font-bold tracking-widest">Portafolios</h2>
             {portafolios.length > 0 && (
               <span className="text-[10px] text-zinc-600 font-bold">
-                {pfFiltrados.length} / {portafolios.length}
+                {pfFiltradosTotal} en total
               </span>
             )}
           </div>
@@ -351,7 +399,7 @@ export const Seguimiento = () => {
           {/* Lista paginada */}
           {loadingPf ? (
             [...Array(3)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)
-          ) : pfFiltrados.length === 0 ? (
+          ) : pfPagina.length === 0 ? (
             <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col items-center justify-center gap-3 min-h-[120px]">
               <BookOpen className="size-7 text-zinc-700" />
               <p className="text-xs text-zinc-600 text-center">
@@ -419,7 +467,7 @@ export const Seguimiento = () => {
 
 
           {/* Controles de paginación */}
-          {totalPaginas > 1 && (
+          {totalPaginasPf > 1 && (
             <div className="flex items-center justify-between pt-1">
               <button
                 onClick={() => setPaginaPf(p => Math.max(0, p - 1))}
@@ -430,7 +478,7 @@ export const Seguimiento = () => {
               </button>
 
               <div className="flex items-center gap-1">
-                {getPaginationRange(paginaPf, totalPaginas).map((p, i) => (
+                {getPaginationRange(paginaPf, totalPaginasPf).map((p, i) => (
                   <React.Fragment key={i}>
                     {p === '...' ? (
                       <span className="px-1 text-[10px] text-zinc-600">...</span>
@@ -452,8 +500,8 @@ export const Seguimiento = () => {
               </div>
 
               <button
-                onClick={() => setPaginaPf(p => Math.min(totalPaginas - 1, p + 1))}
-                disabled={paginaPf === totalPaginas - 1}
+                onClick={() => setPaginaPf(p => Math.min(totalPaginasPf - 1, p + 1))}
+                disabled={paginaPf === totalPaginasPf - 1}
                 className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <ChevronRight className="size-3.5" />
@@ -489,9 +537,9 @@ export const Seguimiento = () => {
           {/* Buscador con validación */}
           {portafolioSel && (
             <div className="space-y-1.5">
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 {/* Input con dropdown */}
-                <div className="relative flex-1">
+                <div className="relative flex-1 min-w-0">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-500 z-10" />
                   <input
                     type="text"
@@ -551,7 +599,7 @@ export const Seguimiento = () => {
                 <button
                   onClick={handleAgregar}
                   disabled={validacion !== 'ok'}
-                  className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm font-bold text-zinc-400 hover:text-white hover:border-white/20 transition-all flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto shrink-0 justify-center px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm font-bold text-zinc-400 hover:text-white hover:border-white/20 transition-all flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <Plus className="size-4" />
                   Agregar
@@ -571,13 +619,21 @@ export const Seguimiento = () => {
             </div>
           )}
 
-          {/* Tabla watchlist */}
+          {/* Tabla watchlist — móvil: tarjetas; sm+: tabla */}
           <div className="rounded-2xl bg-white/[0.02] border border-white/5 overflow-hidden">
-            <div className="grid grid-cols-5 px-5 py-3 text-[10px] uppercase font-bold tracking-widest text-zinc-600 border-b border-white/5">
-              <span className="col-span-2">Símbolo / Empresa</span>
-              <span className="text-right">Último precio</span>
-              <span className="text-right">Tendencia</span>
-              <span></span>
+            {/* Cabecera móvil */}
+            <div className="sm:hidden flex items-center justify-between px-4 py-3 border-b border-white/5 text-[10px] uppercase font-bold tracking-wider text-zinc-500">
+              <span>Símbolo / Empresa</span>
+              <span className="shrink-0 pl-2">Precio · Var.</span>
+            </div>
+            {/* Cabecera escritorio — flex: izquierda flexible, métricas agrupadas a la derecha */}
+            <div className="hidden sm:flex items-center gap-4 px-5 py-3 text-[10px] uppercase font-bold tracking-widest text-zinc-600 border-b border-white/5">
+              <span className="min-w-0 flex-1">Símbolo / Empresa</span>
+              <div className="flex shrink-0 items-center gap-5">
+                <span className="w-[5.5rem] text-right">Último precio</span>
+                <span className="w-[5.5rem] text-right">Tendencia</span>
+                <span className="w-8 shrink-0" aria-hidden />
+              </div>
             </div>
 
             {!portafolioSel ? (
@@ -586,20 +642,40 @@ export const Seguimiento = () => {
                 <p className="text-sm text-zinc-600">Selecciona un portafolio para ver sus símbolos</p>
               </div>
             ) : loadingFav ? (
-              <div className="px-5 py-4 space-y-4">
+              <div className="px-4 sm:px-5 py-4 space-y-4">
                 {[...Array(4)].map((_, i) => (
-                  <div key={i} className="grid grid-cols-5 items-center gap-2">
-                    <div className="col-span-2 flex items-center gap-3">
-                      <Skeleton className="size-9 rounded-xl" />
-                      <div className="space-y-1.5">
-                        <Skeleton className="h-3 w-14" />
-                        <Skeleton className="h-2 w-20" />
+                  <React.Fragment key={i}>
+                    <div className="sm:hidden space-y-3 py-1">
+                      <div className="flex justify-between gap-2">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <Skeleton className="size-9 rounded-xl shrink-0" />
+                          <div className="space-y-1.5 min-w-0 flex-1">
+                            <Skeleton className="h-3 w-16" />
+                            <Skeleton className="h-2 w-32" />
+                          </div>
+                        </div>
+                        <Skeleton className="size-8 rounded-lg shrink-0" />
+                      </div>
+                      <div className="flex justify-between items-end pl-1">
+                        <Skeleton className="h-5 w-24" />
+                        <Skeleton className="h-8 w-28" />
                       </div>
                     </div>
-                    <Skeleton className="h-3 w-16 ml-auto" />
-                    <Skeleton className="h-6 w-16 ml-auto" />
-                    <Skeleton className="size-7 ml-auto rounded-lg" />
-                  </div>
+                    <div className="hidden sm:flex items-center gap-4 py-3">
+                      <div className="flex flex-1 items-center gap-3 min-w-0">
+                        <Skeleton className="size-9 rounded-xl shrink-0" />
+                        <div className="space-y-1.5 min-w-0 flex-1">
+                          <Skeleton className="h-3 w-14" />
+                          <Skeleton className="h-2 w-40 max-w-full" />
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-5">
+                        <Skeleton className="h-3 w-16" />
+                        <Skeleton className="h-6 w-20" />
+                        <Skeleton className="size-7 rounded-lg" />
+                      </div>
+                    </div>
+                  </React.Fragment>
                 ))}
               </div>
             ) : favoritos.length === 0 ? (
@@ -615,48 +691,104 @@ export const Seguimiento = () => {
                   const p = precios[fav.simbolo];
                   const { pct, isUp } = variacion(p);
                   const spark = sparklines[fav.simbolo] ?? [];
+                  const canDelete = !portafolioSel || !defaultPfIds.has(portafolioSel.id);
+                  const sectorCat = catalogo.find(c => c.simbolo === fav.simbolo)?.sector;
                   return (
-                    <motion.div
-                      key={fav.id}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ delay: i * 0.04 }}
-                      className="grid grid-cols-5 items-center px-5 py-4 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors"
-                    >
-                      <div className="col-span-2 flex items-center gap-3">
-                        <div className="size-9 rounded-xl bg-[#0a0a0a] border border-white/10 flex items-center justify-center font-bold text-[10px] text-zinc-300">
-                          {fav.simbolo.substring(0, 2)}
+                    <React.Fragment key={fav.id}>
+                      {/* Móvil: tarjeta apilada */}
+                      <motion.div
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ delay: i * 0.04 }}
+                        className="sm:hidden px-4 py-3 border-b border-white/5 last:border-0 space-y-3 hover:bg-white/[0.02] transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className="size-9 rounded-xl bg-[#0a0a0a] border border-white/10 flex items-center justify-center font-bold text-[10px] text-zinc-300 shrink-0">
+                              {fav.simbolo.substring(0, 2)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-bold text-white text-sm">{fav.simbolo}</p>
+                              <p className="text-[11px] text-zinc-500 leading-snug line-clamp-2">{fav.nombreEmpresa || '—'}</p>
+                            </div>
+                          </div>
+                          {canDelete && (
+                            <button
+                              type="button"
+                              onClick={() => handleEliminar(fav.simbolo)}
+                              title="Eliminar de favoritos"
+                              className="p-2 rounded-lg text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
+                            >
+                              <Trash2 className="size-4" />
+                            </button>
+                          )}
                         </div>
-                        <div>
-                          <p className="font-bold text-white text-sm">{fav.simbolo}</p>
-                          <p className="text-[10px] text-zinc-500 truncate max-w-[120px]">{fav.nombreEmpresa || '—'}</p>
+                        <div className="flex items-end justify-between gap-4 pl-0.5">
+                          <div>
+                            <p className="text-[9px] uppercase font-bold text-zinc-600 tracking-wider mb-0.5">Precio</p>
+                            {p
+                              ? <p className="font-bold text-white text-lg tabular-nums">${Number(p.close).toFixed(2)}</p>
+                              : <Skeleton className="h-6 w-24" />}
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-[9px] uppercase font-bold text-zinc-600 tracking-wider mb-0.5">Variación</p>
+                            <div className="flex flex-col items-end gap-1">
+                              {spark.length > 1 && <Sparkline data={spark} compact positive={isUp} />}
+                              <span className={cn('text-sm font-bold tabular-nums', isUp ? 'text-emerald-400' : 'text-red-400')}>
+                                {pct}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        {p
-                          ? <p className="font-bold text-white text-sm">${Number(p.close).toFixed(2)}</p>
-                          : <Skeleton className="h-4 w-16 ml-auto" />
-                        }
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        {spark.length > 1 && <Sparkline data={spark} />}
-                        <span className={cn('text-xs font-bold', isUp ? 'text-emerald-400' : 'text-red-400')}>
-                          {pct}
-                        </span>
-                      </div>
-                      <div className="flex justify-end">
-                        {(!portafolioSel || !defaultPfIds.has(portafolioSel.id)) && (
-                          <button
-                            onClick={() => handleEliminar(fav.simbolo)}
-                            title="Eliminar de favoritos"
-                            className="p-1.5 rounded-lg text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                          >
-                            <Trash2 className="size-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </motion.div>
+                      </motion.div>
+                      {/* Escritorio: flex — nombre usa el espacio; precio+tendencia agrupados */}
+                      <motion.div
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ delay: i * 0.04 }}
+                        className="hidden sm:flex items-center gap-4 px-5 py-4 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors"
+                      >
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                          <div className="size-9 rounded-xl bg-[#0a0a0a] border border-white/10 flex items-center justify-center font-bold text-[10px] text-zinc-300 shrink-0">
+                            {fav.simbolo.substring(0, 2)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold text-white text-sm">{fav.simbolo}</p>
+                            <p className="text-[10px] text-zinc-500 line-clamp-1">{fav.nombreEmpresa || '—'}</p>
+                            {sectorCat ? (
+                              <p className="text-[9px] text-zinc-600 mt-0.5 line-clamp-1">{sectorCat}</p>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-5">
+                          <div className="w-[5.5rem] text-right">
+                            {p
+                              ? <p className="font-bold text-white text-sm tabular-nums">${Number(p.close).toFixed(2)}</p>
+                              : <Skeleton className="h-4 w-16 ml-auto" />}
+                          </div>
+                          <div className="flex w-[5.5rem] flex-col items-end gap-1">
+                            {spark.length > 1 && <Sparkline data={spark} positive={isUp} />}
+                            <span className={cn('text-xs font-bold tabular-nums', isUp ? 'text-emerald-400' : 'text-red-400')}>
+                              {pct}
+                            </span>
+                          </div>
+                          <div className="flex w-8 justify-end">
+                            {canDelete && (
+                              <button
+                                type="button"
+                                onClick={() => handleEliminar(fav.simbolo)}
+                                title="Eliminar de favoritos"
+                                className="p-1.5 rounded-lg text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                              >
+                                <Trash2 className="size-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </motion.div>
+                    </React.Fragment>
                   );
                 })}
               </AnimatePresence>

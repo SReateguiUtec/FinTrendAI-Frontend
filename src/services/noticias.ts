@@ -38,8 +38,10 @@ export async function getSentimiento(simbolo: string): Promise<SentimientoAgrega
   return data;
 }
 
-export async function getUltimasNoticias(): Promise<Noticia[]> {
-  const { data } = await ms3.get<Noticia[]>('/api/noticias/latest');
+export async function getUltimasNoticias(limit = 50): Promise<Noticia[]> {
+  const { data } = await ms3.get<Noticia[]>('/api/noticias/latest', {
+    params: { limit },
+  });
   return data;
 }
 

@@ -12,6 +12,14 @@ export interface Portafolio {
   created_at: string;
 }
 
+export interface PortafoliosPage {
+  portafolios: Portafolio[];
+  total: number;
+  page: number;
+  pages: number;
+  per_page: number;
+}
+
 export interface Favorito {
   id: number;
   simbolo: string;
@@ -23,8 +31,14 @@ export interface Favorito {
 // Portafolios
 // ------------------------------------------------------------------
 
-export async function getPortafolios(): Promise<Portafolio[]> {
-  const { data } = await ms1.get<Portafolio[]>('/api/portafolios/');
+export async function getPortafolios(
+  page = 1,
+  perPage = 5,
+  search = ''
+): Promise<PortafoliosPage> {
+  const { data } = await ms1.get<PortafoliosPage>('/api/portafolios/', {
+    params: { page, per_page: perPage, ...(search && { search }) },
+  });
   return data;
 }
 

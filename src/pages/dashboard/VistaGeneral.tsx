@@ -5,7 +5,7 @@ import { SignalsPanel } from '@/components/dashboard/signals-panel';
 import { cn } from '@/lib/utils';
 import { TrendingUp, ArrowUpRight, BarChart3, Zap, Layers, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { getUltimoPrecio, type PrecioAccion } from '@/services/precios';
+import { getUltimoPrecio, getSimbolos, type PrecioAccion } from '@/services/precios';
 
 /* ── Config de símbolos ─────────────────────────────────── */
 const SIMBOLOS = [
@@ -47,6 +47,17 @@ export const VistaGeneral = () => {
     SIMBOLOS.map(s => ({ ...s, precio: null, variacion: null, volumen: null }))
   );
   const [loading, setLoading] = useState(true);
+  /** Cantidad de símbolos con `activo` en MS2; null = cargando */
+  const [cantidadSimbolosActivos, setCantidadSimbolosActivos] = useState<number | null>(null);
+
+  useEffect(() => {
+    getSimbolos()
+      .then(list => {
+        const n = list.filter(s => s.activo).length;
+        setCantidadSimbolosActivos(n > 0 ? n : SIMBOLOS.length);
+      })
+      .catch(() => setCantidadSimbolosActivos(SIMBOLOS.length));
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -106,11 +117,11 @@ export const VistaGeneral = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           label="Símbolos activos"
-          value={`${SIMBOLOS.length}`}
-          change="Catálogo"
+          value={cantidadSimbolosActivos === null ? '…' : String(cantidadSimbolosActivos)}
+          change="Catálogo MS2"
           trend="up"
           icon={Layers}
-          subValue="Precios y noticias indexados"
+          subValue="En el catálogo con precios y noticias indexados"
         />
         <StatCard
           label="Mejor rendimiento"

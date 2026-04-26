@@ -11,6 +11,24 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
+/** Hora civil en America/New_York (no usar `new Date(toLocaleString)` — falla fuera de ET). */
+function getEasternWallClock(date: Date) {
+  const f = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const parts = f.formatToParts(date);
+  const wd = parts.find(p => p.type === 'weekday')?.value ?? 'Mon';
+  const hour = parseInt(parts.find(p => p.type === 'hour')?.value ?? '0', 10);
+  const minute = parseInt(parts.find(p => p.type === 'minute')?.value ?? '0', 10);
+  const totalMinutes = hour * 60 + minute;
+  const isWeekend = wd === 'Sat' || wd === 'Sun';
+  return { wd, hour, minute, totalMinutes, isWeekend };
+}
+
 // Market Clock Component
 function MarketClock() {
   const [time, setTime] = useState(new Date());
@@ -20,117 +38,95 @@ function MarketClock() {
     return () => clearInterval(timer);
   }, []);
 
-  // Convert to NYC time (ET)
-  const nycTime = new Date(time.toLocaleString("en-US", { timeZone: "America/New_York" }));
-  const hours = nycTime.getHours();
-  const minutes = nycTime.getMinutes();
-  const day = nycTime.getDay();
-  const totalMinutes = hours * 60 + minutes;
+  const { totalMinutes, isWeekend } = getEasternWallClock(time);
 
   // Market sessions (ET)
   // Pre-market: 4:00 AM - 9:30 AM (240 - 570 minutes)
   // Regular: 9:30 AM - 4:00 PM (570 - 960 minutes)
   // After Hours: 4:00 PM - 8:00 PM (960 - 1200 minutes)
   // Closed: 8:00 PM - 4:00 AM + weekends
-  const isWeekend = day === 0 || day === 6;
-
   type MarketSession = 'pre-market' | 'regular' | 'after-hours' | 'closed';
-  let session: MarketSession = 'closed';
-
-  if (!isWeekend) {
-    if (totalMinutes >= 240 && totalMinutes < 570) {
-      session = 'pre-market';
-    } else if (totalMinutes >= 570 && totalMinutes < 960) {
-      session = 'regular';
-    } else if (totalMinutes >= 960 && totalMinutes < 1200) {
-      session = 'after-hours';
-    }
-  }
 
   // Session config
-  const sessionConfig = {
+  const sessionConfig: Record<MarketSession, {
+    label: string; shortLabel: string; color: string; bgColor: string;
+    dotColor: string; glowColor: string; countdownLabel: string;
+  }> = {
     'pre-market': {
-      label: 'PRE-MARKET',
-      color: 'text-amber-500',
-      bgColor: 'bg-amber-500',
-      glowColor: 'shadow-[0_0_8px_rgba(245,158,11,0.5)]',
-      nextLabel: 'Abre en'
+      label: 'PRE-MARKET',  shortLabel: 'PRE',
+      color: 'text-amber-400', bgColor: 'bg-amber-500/15 border-amber-500/30',
+      dotColor: 'bg-amber-400', glowColor: 'shadow-[0_0_8px_rgba(245,158,11,0.5)]',
+      countdownLabel: 'Regular abre en',
     },
     'regular': {
-      label: 'EN SESIÓN',
-      color: 'text-emerald-500',
-      bgColor: 'bg-emerald-500',
-      glowColor: 'shadow-[0_0_8px_rgba(16,185,129,0.5)]',
-      nextLabel: 'Cierra en'
+      label: 'EN SESIÓN', shortLabel: 'REG',
+      color: 'text-emerald-400', bgColor: 'bg-emerald-500/15 border-emerald-500/30',
+      dotColor: 'bg-emerald-400', glowColor: 'shadow-[0_0_8px_rgba(16,185,129,0.5)]',
+      countdownLabel: 'Regular cierra en',
     },
     'after-hours': {
-      label: 'AFTER HOURS',
-      color: 'text-blue-400',
-      bgColor: 'bg-blue-400',
-      glowColor: 'shadow-[0_0_8px_rgba(96,165,250,0.5)]',
-      nextLabel: 'Cierra en'
+      label: 'AFTER HOURS', shortLabel: 'AFT',
+      color: 'text-blue-400', bgColor: 'bg-blue-500/15 border-blue-400/30',
+      dotColor: 'bg-blue-400', glowColor: 'shadow-[0_0_8px_rgba(96,165,250,0.5)]',
+      countdownLabel: 'After hours cierra en',
     },
     'closed': {
-      label: 'CERRADO',
-      color: 'text-red-400',
-      bgColor: 'bg-red-500',
-      glowColor: '',
-      nextLabel: 'Abre en'
-    }
+      label: 'CERRADO', shortLabel: 'CLS',
+      color: 'text-red-400', bgColor: 'bg-red-500/15 border-red-500/30',
+      dotColor: 'bg-red-500', glowColor: '',
+      countdownLabel: 'Pre-market abre en',
+    },
   };
+
+  const SESSION_ORDER: MarketSession[] = ['pre-market', 'regular', 'after-hours', 'closed'];
+
+  let session: MarketSession = 'closed';
+  if (!isWeekend) {
+    if (totalMinutes >= 240 && totalMinutes < 570)  session = 'pre-market';
+    else if (totalMinutes >= 570 && totalMinutes < 960)  session = 'regular';
+    else if (totalMinutes >= 960 && totalMinutes < 1200) session = 'after-hours';
+  }
 
   const config = sessionConfig[session];
 
-  // Calculate countdown
-  let countdownText = "";
-  let targetTime: Date | null = null;
-
-  if (session === 'pre-market') {
-    // Time until regular market open (9:30 AM)
-    targetTime = new Date(nycTime);
-    targetTime.setHours(9, 30, 0, 0);
-  } else if (session === 'regular') {
-    // Time until close (4:00 PM)
-    targetTime = new Date(nycTime);
-    targetTime.setHours(16, 0, 0, 0);
-  } else if (session === 'after-hours') {
-    // Time until after-hours close (8:00 PM)
-    targetTime = new Date(nycTime);
-    targetTime.setHours(20, 0, 0, 0);
-  } else if (session === 'closed') {
-    if (isWeekend) {
-      // Time until Monday pre-market (4:00 AM)
-      const daysUntilMonday = day === 0 ? 1 : 2; // Sunday=1, Saturday=2
-      targetTime = new Date(nycTime);
-      targetTime.setDate(targetTime.getDate() + daysUntilMonday);
-      targetTime.setHours(4, 0, 0, 0);
-    } else if (totalMinutes >= 1200) {
-      // After 8 PM, next day pre-market
-      targetTime = new Date(nycTime);
-      targetTime.setDate(targetTime.getDate() + 1);
-      targetTime.setHours(4, 0, 0, 0);
-    } else {
-      // Before 4 AM, same day pre-market
-      targetTime = new Date(nycTime);
-      targetTime.setHours(4, 0, 0, 0);
+  /** Minutos hasta el próximo hito (misma lógica ET que la sesión). */
+  function minutesUntilNextBoundary(): number {
+    if (session === 'pre-market') return 9 * 60 + 30 - totalMinutes;
+    if (session === 'regular') return 16 * 60 - totalMinutes;
+    if (session === 'after-hours') return 20 * 60 - totalMinutes;
+    if (session === 'closed') {
+      if (isWeekend) {
+        // Buscar el próximo lun 04:00 ET a saltos de 5 min (suficiente para el texto del countdown)
+        const start = time.getTime();
+        const max = 8 * 24 * 60 * 60 * 1000;
+        for (let ms = 5 * 60 * 1000; ms <= max; ms += 5 * 60 * 1000) {
+          const p = getEasternWallClock(new Date(start + ms));
+          if (p.wd === 'Mon' && p.totalMinutes >= 240 && p.totalMinutes < 570) {
+            return Math.round(ms / (60 * 1000));
+          }
+        }
+        return 48 * 60;
+      }
+      if (totalMinutes >= 1200) return 24 * 60 - totalMinutes + 4 * 60;
+      return 4 * 60 - totalMinutes;
     }
+    return 0;
   }
 
-  if (targetTime) {
-    const diff = targetTime.getTime() - nycTime.getTime();
-    if (diff > 0) {
-      const diffHours = Math.floor(diff / (1000 * 60 * 60));
-      const diffMinutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      if (diffHours > 24) {
-        const days = Math.floor(diffHours / 24);
-        const remainingHours = diffHours % 24;
-        countdownText = `${config.nextLabel} ${days}d ${remainingHours}h`;
-      } else {
-        countdownText = `${config.nextLabel} ${diffHours}h ${diffMinutes}m`;
-      }
+  let countdownText = '';
+  const diffMin = minutesUntilNextBoundary();
+  if (diffMin > 0) {
+    const diffHours = Math.floor(diffMin / 60);
+    const diffMinutes = diffMin % 60;
+    if (diffHours >= 48) {
+      const days = Math.floor(diffHours / 24);
+      const remainingHours = diffHours % 24;
+      countdownText = `${config.countdownLabel} ${days}d ${remainingHours}h`;
     } else {
-      countdownText = 'Iniciando...';
+      countdownText = `${config.countdownLabel} ${diffHours}h ${diffMinutes}m`;
     }
+  } else {
+    countdownText = 'Iniciando...';
   }
 
   const formatTime = (date: Date) => {
@@ -143,59 +139,65 @@ function MarketClock() {
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-[160px] mb-2">
-      <div className="bg-white/[0.02] rounded-2xl p-5 w-full h-full flex flex-col justify-between">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+    <div className="flex-1 flex flex-col min-h-[180px] mb-2">
+      <div className="bg-white/[0.02] rounded-2xl p-4 w-full h-full flex flex-col justify-between">
+
+        {/* Header: NYSE label */}
+        <div className="flex items-center justify-between mb-2">
           <span className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">NYSE · NASDAQ</span>
-          <div className="flex items-center gap-1.5">
-            <div className={cn(
-              "size-1.5 rounded-full animate-pulse",
-              config.bgColor,
-              config.glowColor
-            )} />
-            <span className={cn("text-[10px] font-bold", config.color)}>
-              {config.label}
-            </span>
-          </div>
+          {/* Dot pulsante del estado activo */}
+          <div className={cn('size-1.5 rounded-full animate-pulse', config.dotColor, config.glowColor)} />
         </div>
 
-        {/* Time */}
-        <div className="text-center flex-1 flex flex-col justify-center my-4">
-          <div className="text-4xl font-black text-white tracking-tight tabular-nums">
+        {/* 4 pills de sesión */}
+        <div className="grid grid-cols-4 gap-1">
+          {SESSION_ORDER.map(s => {
+            const c = sessionConfig[s];
+            const isActive = s === session;
+            return (
+              <div
+                key={s}
+                className={cn(
+                  'flex flex-col items-center gap-0.5 rounded-lg py-1 px-0.5 border text-center transition-all',
+                  isActive ? `${c.bgColor} ${c.color}` : 'border-transparent text-zinc-600',
+                )}
+              >
+                <span className={cn('text-[9px] font-black tracking-wide', isActive ? c.color : 'text-zinc-600')}>
+                  {c.shortLabel}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+        {/* Etiqueta del estado actual — removida: ya se ve en las pills */}
+
+        {/* Clock */}
+        <div className="text-center flex-1 flex flex-col justify-center my-3">
+          <div className="text-3xl font-black text-white tracking-tight tabular-nums">
             {formatTime(time)}
           </div>
-          <div className="text-[11px] text-zinc-500 uppercase tracking-widest mt-1">
+          <div className="text-[10px] text-zinc-500 uppercase tracking-widest mt-0.5">
             ET (Nueva York)
           </div>
         </div>
 
-        {/* Session Info */}
-        <div className="space-y-3">
-          {/* Current session hours */}
+        {/* Session info + countdown */}
+        <div className="space-y-2">
           <div className="flex items-center justify-center gap-2 text-[10px]">
             <span className="text-zinc-500">Horario:</span>
             <span className="text-zinc-300 font-medium">
-              {session === 'pre-market' && '4:00 AM - 9:30 AM'}
-              {session === 'regular' && '9:30 AM - 4:00 PM'}
-              {session === 'after-hours' && '4:00 PM - 8:00 PM'}
-              {session === 'closed' && 'Cerrado'}
+              {session === 'pre-market'  && '4:00 – 9:30 AM'}
+              {session === 'regular'     && '9:30 AM – 4:00 PM'}
+              {session === 'after-hours' && '4:00 – 8:00 PM'}
+              {session === 'closed'      && 'Cerrado'}
             </span>
           </div>
 
-          {/* Countdown */}
-          <div className="flex items-center justify-center gap-2 pt-3 border-t border-white/5">
-            <svg
-              className="size-3.5 text-zinc-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 6v6l4 2" />
+          <div className="flex items-center justify-center gap-1.5 pt-2 border-t border-white/5">
+            <svg className="size-3 text-zinc-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
             </svg>
-            <span className="text-xs text-zinc-400 font-medium">
+            <span className={cn('text-[10px] font-medium', config.color)}>
               {countdownText}
             </span>
           </div>

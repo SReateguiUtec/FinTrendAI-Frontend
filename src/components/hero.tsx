@@ -20,8 +20,8 @@ const githubRepoUrl =
     (import.meta.env.VITE_GITHUB_URL as string | undefined)?.trim() || 'https://github.com';
 
 const LANDING_NAV_SECTIONS: { label: string; id: string }[] = [
-    { label: 'Chatbot', id: 'features' },
-    { label: 'Predicciones', id: 'features' },
+    { label: 'Features', id: 'features' },
+    { label: 'FAQ', id: 'faq' },
     { label: 'Mercado', id: 'demo' },
 ];
 
@@ -101,11 +101,11 @@ const Navbar: React.FC = () => {
                 transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
                 className='fixed top-4 left-1/2 z-50 flex min-w-0 w-[min(94%,36rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0B0A09]/60 shadow-2xl backdrop-blur-xl md:w-[min(94%,44rem)]'
             >
-                <div className='flex items-center justify-between gap-2 px-4 py-2 md:gap-4 md:px-5 md:py-2.5'>
+                <div className='relative flex items-center justify-between gap-2 px-4 py-2 md:gap-4 md:px-5 md:py-2.5'>
                     <button
                         type='button'
                         onClick={goToLandingTop}
-                        className='flex min-w-0 shrink cursor-pointer items-center gap-2 rounded-lg text-left outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-white/30 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B0A09]'
+                        className='relative z-10 flex min-w-0 shrink cursor-pointer items-center gap-2 rounded-lg text-left outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-white/30 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B0A09]'
                         aria-label='Ir al inicio de la página'
                     >
                         <span className='text-sm font-bold tracking-wider text-white md:text-lg'>
@@ -113,20 +113,23 @@ const Navbar: React.FC = () => {
                         </span>
                     </button>
 
-                    <div className='hidden min-w-0 flex-1 items-center justify-center gap-1 md:flex lg:gap-2'>
+                    <nav
+                        aria-label='Secciones'
+                        className='pointer-events-none absolute left-1/2 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-1 md:flex lg:gap-2'
+                    >
                         {LANDING_NAV_SECTIONS.map(({ label, id }) => (
                             <button
                                 key={`${label}-${id}`}
                                 type='button'
                                 onClick={() => scrollToSection(id)}
-                                className='shrink-0 rounded-lg px-2 py-1.5 text-center text-[11px] font-semibold tracking-wide text-zinc-400 transition-colors hover:bg-white/5 hover:text-white lg:px-3 lg:text-xs'
+                                className='pointer-events-auto shrink-0 rounded-lg px-2 py-1.5 text-center text-[11px] font-medium tracking-wide text-zinc-400 transition-colors hover:bg-white/5 hover:text-white lg:px-3 lg:text-xs'
                             >
                                 {label}
                             </button>
                         ))}
-                    </div>
+                    </nav>
 
-                    <div className='hidden shrink-0 items-center gap-2 md:flex'>
+                    <div className='relative z-10 hidden shrink-0 items-center gap-2 md:flex'>
                         <a
                             href={githubRepoUrl}
                             target='_blank'
@@ -146,7 +149,7 @@ const Navbar: React.FC = () => {
 
                     <button
                         type='button'
-                        className='flex size-10 shrink-0 items-center justify-center rounded-xl text-zinc-300 transition-colors hover:bg-white/5 hover:text-white md:hidden'
+                        className='relative z-10 flex size-10 shrink-0 items-center justify-center rounded-xl text-zinc-300 transition-colors hover:bg-white/5 hover:text-white md:hidden'
                         aria-expanded={menuOpen}
                         aria-controls='landing-mobile-nav'
                         aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
@@ -237,7 +240,7 @@ const stats = [
 
 export default function HeroSectionwithPixelBackground() {
     return (
-        <div className='relative min-h-screen w-full bg-white dark:bg-[#0a0a0a] overflow-hidden'>
+        <div className='relative min-h-min w-full bg-white dark:bg-[#0a0a0a] overflow-hidden md:min-h-screen'>
             {/* Background Image Layer */}
             <div className='absolute inset-x-0 bottom-0 top-[160px] z-0 pointer-events-none'>
                 <img
@@ -267,16 +270,16 @@ export default function HeroSectionwithPixelBackground() {
                 />
             </div>
 
-            <div className='relative flex min-h-screen flex-col pt-36 z-20'>
+            <div className='relative flex min-h-min flex-col pt-32 z-20 md:min-h-screen md:pt-36'>
                 <Navbar />
                 <LogoLoop />
-                <br />
-                <div className='flex flex-1 flex-col items-center px-6 pt-12 pb-12'>
+                <div className='h-2 shrink-0 md:h-4' aria-hidden />
+                <div className='flex w-full grow-0 flex-col items-center px-4 pb-6 pt-6 md:grow md:px-6 md:pb-12 md:pt-12'>
                     <motion.div
                         initial={{ opacity: 0, y: -16 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                        className='mb-10 flex items-center gap-2'
+                        className='mb-12 flex items-center gap-2 md:mb-10 lg:mb-12'
                     >
                         <Announcement
                             movingBorder
@@ -319,13 +322,12 @@ export default function HeroSectionwithPixelBackground() {
                             <TextHighlighter type='wavy' highlightColor='#D4AF37' strokeWidth={4}>
                                 <span>predicelo.</span>
                             </TextHighlighter>
-                            <br />
                         </motion.h1>
                         <StatsCount
                             stats={stats}
                             title='REVOLUCIONANDO EL ANÁLISIS DE MERCADO CON FINTREND AI'
                             showDividers={true}
-                            className='mt-8 py-1 sm:py-2 lg:py-3 w-full md:mt-10'
+                            className='mt-10 w-full py-1 sm:mt-14 sm:py-2 md:mt-16 lg:py-3'
                         />
                     </div>
                 </div>

@@ -5,14 +5,24 @@ import { motion } from "framer-motion";
 
 interface StatCardProps {
   label: string;
-  value: string;
+  value: React.ReactNode;
   change: string;
   trend: 'up' | 'down';
   icon: LucideIcon;
   subValue?: string;
+  /** Clases del titular principal (por defecto text-2xl; usar text-base + wrap para listas largas) */
+  valueClassName?: string;
 }
 
-export const StatCard = ({ label, value, change, trend, icon: Icon, subValue }: StatCardProps) => {
+export const StatCard = ({
+  label,
+  value,
+  change,
+  trend,
+  icon: Icon,
+  subValue,
+  valueClassName,
+}: StatCardProps) => {
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
@@ -38,7 +48,14 @@ export const StatCard = ({ label, value, change, trend, icon: Icon, subValue }: 
 
       <div>
         <p className="text-zinc-500 text-sm font-medium mb-1">{label}</p>
-        <h3 className="text-2xl font-bold text-white tracking-tight">{value}</h3>
+        <h3
+          className={cn(
+            'font-bold text-white tracking-tight',
+            valueClassName ?? 'text-2xl',
+          )}
+        >
+          {value}
+        </h3>
         {subValue && (
           <p className="text-xs text-zinc-600 mt-1 font-medium">{subValue}</p>
         )}

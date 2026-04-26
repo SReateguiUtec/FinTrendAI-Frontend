@@ -1,18 +1,13 @@
 import React, { useRef } from 'react';
 import { LaserFlow } from './ui/LaserFlow';
-import BloombergTerminal from './BloombergTerminal';
+import RetroBloomberg from './RetroTerminal';
 
 export function LaserFlowBoxExample() {
   const revealImgRef = useRef(null);
 
   return (
     <div
-      style={{
-        height: '620px',
-        position: 'relative',
-        overflow: 'hidden',
-        backgroundColor: '#0a0a0a'
-      }}
+      className="relative h-[420px] overflow-hidden bg-[#0a0a0a] sm:h-[500px] md:h-[620px]"
       onMouseMove={(e) => {
         const rect = e.currentTarget.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -39,7 +34,7 @@ export function LaserFlowBoxExample() {
 
       <div style={{
         position: 'absolute',
-        top: '49.5%',
+        top: '50%',
         left: '50%',
         transform: 'translate(-50%)',
         width: '86%',
@@ -58,49 +53,32 @@ export function LaserFlowBoxExample() {
           style={{
             width: '100%',
             height: '100%',
-            padding: '0.5rem',
+            padding: '0.35rem',
             overflow: 'hidden',
             pointerEvents: 'none',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            flexDirection: 'column',
+            alignItems: 'stretch',
+            justifyContent: 'stretch',
             position: 'relative',
+            minHeight: 0,
           }}
         >
-          {/* Franja superior: flex centra el texto; no afecta al terminal */}
           <div
+            role="region"
+            aria-label="Demo terminal de mercado"
             style={{
-              position: 'absolute',
-              top: '1.2rem',
-              left: 0,
-              right: 0,
-              padding: '0 0.75rem',
+              position: 'relative',
+              zIndex: 2,
+              flex: 1,
+              minHeight: 0,
+              width: '100%',
+              height: '100%',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1,
-              pointerEvents: 'none',
+              flexDirection: 'column',
             }}
           >
-            <p
-              className="text-[0.65rem] md:text-[0.95rem]"
-              style={{
-                margin: 0,
-                maxWidth: 'min(42rem, 100%)',
-                textAlign: 'center',
-                fontFamily: "'Share Tech Mono', ui-monospace, monospace",
-                fontWeight: 500,
-                letterSpacing: '0.06em',
-                lineHeight: 1.45,
-                color: 'rgba(255, 235, 190, 0.95)',
-                textWrap: 'balance',
-              }}
-            >
-              Fintrend analiza el mercado y te da recomendaciones para tu inversión.
-            </p>
-          </div>
-          <div aria-hidden style={{ position: 'relative', zIndex: 2 }}>
-            <BloombergTerminal />
+            <RetroBloomberg />
           </div>
         </div>
       </div>
@@ -111,7 +89,7 @@ export function LaserFlowBoxExample() {
         style={{
           position: 'absolute',
           inset: 0,
-          zIndex: 0,
+          zIndex: 8,
           mixBlendMode: 'lighten',
           pointerEvents: 'none',
           overflow: 'hidden',
@@ -123,20 +101,26 @@ export function LaserFlowBoxExample() {
           maskRepeat: 'no-repeat',
         } as React.CSSProperties & { '--mx': string; '--my': string }}
       >
-        {/* Contenido posicionado igual que el card para que el reveal coincida */}
-        <div style={{
-          position: 'absolute',
-          top: '26%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '70%',
-          height: '40%',
-          overflow: 'visible',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          gap: '0.25rem',
-        }}>
+        {/* Por encima del marco dorado (empieza en 50%): filas en la franja negra del laser */}
+        <div
+          style={{
+            position: 'absolute',
+            top: '24%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '72%',
+            maxWidth: 'min(36rem, 92vw)',
+            height: '38%',
+            maxHeight: '240px',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            gap: '0.2rem',
+            padding: '0.3rem',
+            boxSizing: 'border-box',
+          }}
+        >
           {[
             { ticker: 'AAPL', name: 'Apple Inc.', change: '+3.24%', price: '$189.42', up: true },
             { ticker: 'NVDA', name: 'NVIDIA Corp.', change: '+7.81%', price: '$875.20', up: true },
