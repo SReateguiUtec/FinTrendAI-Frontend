@@ -15,7 +15,15 @@ export interface Noticia {
   fuente: string;
   url?: string;
   fechaPublicacion: string; // campo real en MongoDB
-  fecha?: string;           // alias por compatibilidad
+  fecha?: string; // alias por compatibilidad
+  /** Cuerpo corto; cuando exista en Mongo, sustituye al resumen autogenerado. */
+  resumen?: string;
+  autor?: string;
+  categoria?: string;
+  /** URL de avatar (cuando haya almacenamiento en base de datos). */
+  imagenAutorUrl?: string;
+  /** Foto/hero del artículo; opcional, no se muestra aún en la card compacta. */
+  imagenUrl?: string;
 }
 
 export interface SentimientoAgregado {

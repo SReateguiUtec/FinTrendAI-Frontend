@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Home } from './pages/Home';
 import Dashboard from './pages/Dashboard';
+import NotFoundPage from './components/ui/not-found-glitch';
 
 function App() {
   return (
@@ -10,6 +11,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/dashboard/*" element={<Dashboard />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </main>
       </div>

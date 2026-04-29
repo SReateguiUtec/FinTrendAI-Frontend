@@ -129,7 +129,7 @@ Ejecuta ESLint sobre el proyecto.
 │   │   ├── ui/                     # Componentes base y efectos visuales
 │   │   │   ├── LaserFlow.tsx
 │   │   │   ├── agent-plan.tsx
-│   │   │   ├── ai-input.tsx
+│   │   │   ├── color-orb.tsx
 │   │   │   ├── button.tsx
 │   │   │   ├── card.tsx
 │   │   │   ├── motion-tiles.tsx

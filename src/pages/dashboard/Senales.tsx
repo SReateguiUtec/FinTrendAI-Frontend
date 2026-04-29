@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { getSenal, type Senal, type TipoSenal } from '@/services/senales';
 import { ms2, ms3 } from '@/services/api';
 import { getSimbolos, type Simbolo } from '@/services/precios';
-import Plan from '@/components/ui/agent-plan';
+import WizardPlan from '@/components/ui/wizard-plan';
 
 /* ── UI Components ────────────────────────────────────────── */
 
@@ -316,7 +316,7 @@ export const Senales = () => {
             exit={{ opacity: 0 }}
             className="rounded-2xl space-y-4"
           >
-            <Plan currentStep={currentStep} />
+            <WizardPlan currentStep={currentStep} />
           </motion.div>
         ) : resultado ? (
           <motion.div

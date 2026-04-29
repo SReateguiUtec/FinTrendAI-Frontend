@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, type MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Newspaper, Search, TrendingUp, TrendingDown, Minus,
-  ExternalLink, RefreshCw, AlertCircle, ChevronLeft, ChevronRight
+  RefreshCw, AlertCircle, ChevronLeft, ChevronRight,
+  MessageCircle, Share2, Clock, ChevronRight as ArrowRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -44,6 +45,149 @@ function formatFecha(fecha: string) {
   return new Date(fecha).toLocaleDateString('es-MX', {
     day: '2-digit', month: 'short', year: 'numeric',
   });
+}
+
+function timeAgo(iso: string) {
+  const t = Date.now() - new Date(iso).getTime();
+  const s = Math.max(0, Math.floor(t / 1000));
+  if (s < 60) return 'hace un momento';
+  if (s < 3600) return `hace ${Math.floor(s / 60)} min`;
+  if (s < 86400) return `hace ${Math.floor(s / 3600)} h`;
+  if (s < 604800) return `hace ${Math.floor(s / 86400)} d`;
+  return formatFecha(iso);
+}
+
+function iniciales(texto: string) {
+  const t = texto.replace(/[^a-zA-Z0-9áéíóúñü]/g, ' ').trim();
+  if (!t) return 'FT';
+  const p = t.split(/\s+/).filter(Boolean);
+  if (p.length === 1) return p[0]!.slice(0, 2).toUpperCase();
+  return (p[0]![0]! + p[1]![0]!).toUpperCase();
+}
+
+function resumenVista(n: Noticia) {
+  if (n.resumen?.trim()) return n.resumen.trim();
+  return `Cobertura ${n.simbolo} · sentimiento ${n.sentimiento} según el análisis de noticias del activo.`;
+}
+
+type NewsCardProps = {
+  noticia: Noticia;
+  showTrending: boolean;
+};
+
+function NewsCard({ noticia, showTrending }: NewsCardProps) {
+  const autor = noticia.autor || noticia.fuente;
+  const rol = 'Medio y datos de mercado';
+  const categoria = noticia.categoria || noticia.simbolo;
+  const iso = noticia.fechaPublicacion ?? noticia.fecha ?? new Date().toISOString();
+  const href = noticia.url || '#';
+  const externo = Boolean(noticia.url);
+
+  const share = async (e: MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!noticia.url) return;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: noticia.titulo, url: noticia.url });
+      } else {
+        await navigator.clipboard.writeText(noticia.url);
+      }
+    } catch { /* ignore */ }
+  };
+
+  return (
+    <article className="rounded-2xl border border-white/[0.08] bg-[#0f0f0f] p-4 sm:p-5 shadow-sm transition-all hover:border-white/15">
+      <header className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          {noticia.imagenAutorUrl ? (
+            <img
+              src={noticia.imagenAutorUrl}
+              alt=""
+              className="h-9 w-9 shrink-0 rounded-full border border-white/10 object-cover"
+            />
+          ) : (
+            <div
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-zinc-800/80 text-[10px] font-bold text-zinc-300"
+              aria-hidden
+            >
+              {iniciales(autor)}
+            </div>
+          )}
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold text-white">{autor}</p>
+            <p className="truncate text-xs text-zinc-500">{rol}</p>
+          </div>
+        </div>
+        <div className="flex flex-shrink-0 items-center gap-2">
+          {showTrending && (
+            <span className="hidden sm:inline-flex items-center gap-1 rounded-full border border-amber-500/35 px-2 py-0.5 text-[10px] font-bold uppercase tracking-tight text-amber-500">
+              <TrendingUp className="size-3" />
+              Trending
+            </span>
+          )}
+          <div className="flex items-center gap-1 text-[10px] text-zinc-500 sm:text-xs">
+            <Clock className="size-3 shrink-0 opacity-70" />
+            <span className="whitespace-nowrap">{timeAgo(iso)}</span>
+          </div>
+        </div>
+      </header>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <SentimientoBadge tipo={noticia.sentimiento} />
+        <span className="text-[10px] text-zinc-600">· {noticia.fuente}</span>
+      </div>
+
+      <div className="mt-3 min-w-0">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <h2 className="min-w-0 max-w-full flex-1 text-base font-bold leading-snug text-white sm:text-lg">
+            {noticia.titulo}
+          </h2>
+          <span className="shrink-0 rounded-full border border-white/15 bg-white/[0.04] px-2.5 py-0.5 text-[10px] font-semibold text-zinc-400">
+            {categoria}
+          </span>
+        </div>
+        <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-zinc-500">
+          {resumenVista(noticia)}
+        </p>
+      </div>
+
+      <footer className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/5 pt-3">
+        <div className="flex items-center gap-4 text-zinc-500">
+          <span className="inline-flex items-center gap-1.5 text-xs" title="Comentarios (próximamente)">
+            <MessageCircle className="size-3.5" />
+            <span className="tabular-nums">—</span>
+          </span>
+          {noticia.url && (
+            <button
+              type="button"
+              onClick={share}
+              className="inline-flex items-center gap-1.5 text-xs text-zinc-500 transition hover:text-zinc-300"
+            >
+              <Share2 className="size-3.5" />
+              Compartir
+            </button>
+          )}
+        </div>
+        <div className="ml-auto">
+          {externo ? (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-zinc-400 transition hover:border-amber-500/30 hover:text-white"
+            >
+              <ArrowRight className="size-4" />
+            </a>
+          ) : (
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/5 text-zinc-600">
+              <ArrowRight className="size-4" />
+            </span>
+          )}
+        </div>
+      </footer>
+    </article>
+  );
 }
 
 /* ── Page ─────────────────────────────────────────────────── */
@@ -243,23 +387,31 @@ export const Noticias = () => {
         </div>
       </div>
 
-      {/* Resumen de sentimiento */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+      {/* Resumen de sentimiento: una fila de 3 en móvil; desktop conserva aire */}
+      <div
+        className="grid grid-cols-3 gap-2 sm:gap-4"
+        aria-label="Resumen de noticias por sentimiento en el período"
+      >
         {(['Bullish', 'Bearish', 'Neutral'] as const).map(tipo => {
           const { color, Icon } = sentimientoConfig[tipo];
           return (
-            <div key={tipo} className="p-4 sm:p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-white/10 transition-all">
-              <div className="flex items-center gap-2 mb-3">
-                <div className={cn('p-1.5 rounded-lg border', color.split(' ').slice(1).join(' '))}>
-                  <Icon className={cn('size-3.5', color.split(' ')[0])} />
+            <div
+              key={tipo}
+              className="flex flex-col items-center rounded-xl border border-white/5 bg-white/[0.02] p-2.5 text-center transition-all hover:border-white/10 sm:items-stretch sm:rounded-2xl sm:p-5 sm:text-left"
+            >
+              <div className="mb-1.5 flex w-full items-center justify-center gap-1.5 sm:mb-3 sm:justify-start sm:gap-2">
+                <div className={cn('shrink-0 rounded-md border p-1 sm:rounded-lg sm:p-1.5', color.split(' ').slice(1).join(' '))}>
+                  <Icon className={cn('size-3 sm:size-3.5', color.split(' ')[0])} />
                 </div>
-                <span className="text-xs font-bold uppercase tracking-widest text-zinc-500">{tipo}</span>
+                <span className="text-[0.6rem] font-bold uppercase leading-tight tracking-tight text-zinc-500 sm:text-xs sm:tracking-widest">
+                  {tipo}
+                </span>
               </div>
               {loading
-                ? <Skeleton className="h-7 w-16 mb-1" />
-                : <p className={cn('text-2xl font-bold', color.split(' ')[0])}>{conteos[tipo]}</p>
+                ? <Skeleton className="h-6 w-10 self-center sm:mb-1 sm:h-7 sm:w-16 sm:self-start" />
+                : <p className={cn('text-lg font-bold tabular-nums sm:mb-0.5 sm:text-2xl', color.split(' ')[0])}>{conteos[tipo]}</p>
               }
-              <p className="text-[10px] text-zinc-700">noticias en el período</p>
+              <p className="mt-0.5 hidden text-[10px] text-zinc-700 sm:mt-0 sm:block">noticias en el período</p>
             </div>
           );
         })}
@@ -294,24 +446,31 @@ export const Noticias = () => {
         </div>
       )}
 
-      {/* Feed de noticias */}
-      <div className="space-y-3">
+      {/* Feed de noticias (cards estilo blog; sin imagen de portada) */}
+      <div className="max-w-3xl space-y-4">
         {loading ? (
-          [...Array(5)].map((_, i) => (
-            <div key={i} className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex gap-4">
-              <div className="flex-1 space-y-2">
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-5 w-12 rounded-full" />
-                  <Skeleton className="h-3 w-16" />
+          [...Array(4)].map((_, i) => (
+            <div
+              key={i}
+              className="space-y-4 rounded-2xl border border-white/[0.06] bg-[#0f0f0f] p-5"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-9 w-9 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-3.5 w-32" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
                 </div>
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-3 w-4/5" />
-                <div className="flex items-center gap-3 pt-1">
-                  <Skeleton className="h-2 w-20" />
-                  <Skeleton className="h-2 w-16" />
-                </div>
+                <Skeleton className="h-3 w-16" />
               </div>
-              <Skeleton className="size-8 rounded-lg shrink-0" />
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-3 w-4/5" />
+              </div>
+              <div className="border-t border-white/5 pt-3">
+                <Skeleton className="h-4 w-full" />
+              </div>
             </div>
           ))
         ) : noticiasFiltradas.length === 0 ? (
@@ -332,34 +491,11 @@ export const Noticias = () => {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.03 }}
-                className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-white/10 flex gap-4 group transition-all"
               >
-                <div className="flex-1 space-y-2 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <SentimientoBadge tipo={noticia.sentimiento} />
-                    <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] font-bold text-zinc-400">
-                      {noticia.simbolo}
-                    </span>
-                    <span className="text-[10px] text-zinc-600">{formatFecha(noticia.fechaPublicacion ?? noticia.fecha)}</span>
-                  </div>
-                  <p className="text-sm font-semibold text-white leading-snug line-clamp-2">
-                    {noticia.titulo}
-                  </p>
-                  <div className="flex items-center gap-3 text-[10px] text-zinc-600">
-                    <span>📰 {noticia.fuente}</span>
-                  </div>
-                </div>
-
-                {noticia.url && (
-                  <a
-                    href={noticia.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 rounded-lg bg-white/5 border border-white/10 text-zinc-600 hover:text-white hover:border-white/20 transition-all self-start shrink-0 opacity-0 group-hover:opacity-100"
-                  >
-                    <ExternalLink className="size-4" />
-                  </a>
-                )}
+                <NewsCard
+                  noticia={noticia}
+                  showTrending={paginaNoticias === 0 && i === 0}
+                />
               </motion.div>
             ))}
           </AnimatePresence>

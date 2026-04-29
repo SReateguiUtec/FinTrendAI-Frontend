@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LineChart, Plus, Star, Trash2, Search,
   ChevronRight, BookOpen, AlertCircle, CheckCircle2, XCircle, X,
-  ChevronLeft,
+  ChevronLeft, TrendingUp, Activity,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -12,9 +12,10 @@ import {
   type Portafolio, type Favorito,
 } from '@/services/portafolio';
 import {
-  getUltimoPrecio, getPrecios, getSimbolos,
+  getUltimoPrecio, getPrecios, getPreciosRango, getSimbolos,
   type PrecioAccion, type Simbolo,
 } from '@/services/precios';
+import { ChartHistorial } from '@/components/chart-historial';
 
 /* ── Skeleton ─────────────────────────────────────────────── */
 const Skeleton = ({ className }: { className?: string }) => (
@@ -51,7 +52,31 @@ const Sparkline = ({
   );
 };
 
-/* ── Page ─────────────────────────────────────────────────── */
+/** Día de calendario local (YYYY-MM-DD). */
+function toISODateLocal(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * MS2 espera `LocalDateTime` en [inicio, fin]. `fin` solo con fecha
+ * (medianoche) excluye filas de ese mismo día con hora > 00:00:00.
+ */
+function inicioFinDesdeRangoGrafico(rango: string): { inicio: string; fin: string } {
+  const finD = new Date();
+  const inicioD = new Date(finD);
+  if (rango === '30d') inicioD.setDate(inicioD.getDate() - 30);
+  else if (rango === '90d') inicioD.setDate(inicioD.getDate() - 90);
+  else if (rango === '1y') inicioD.setDate(inicioD.getDate() - 365);
+  else inicioD.setDate(inicioD.getDate() - 30);
+  return {
+    inicio: `${toISODateLocal(inicioD)}T00:00:00`,
+    fin: `${toISODateLocal(finD)}T23:59:59`,
+  };
+}
+
 export const Seguimiento = () => {
   /* Portafolios */
   const [portafolios, setPortafolios] = useState<Portafolio[]>([]);
@@ -87,6 +112,18 @@ export const Seguimiento = () => {
   /* Paginación de favoritos (watchlist) */
   const [paginaFav, setPaginaFav] = useState(0);
   const FAV_POR_PAGINA = 7;
+
+  /* Gráfico de precios */
+  const [simboloGrafico, setSimboloGrafico] = useState<string | null>(null);
+  const [rangoGrafico, setRangoGrafico] = useState('30d');
+  const [datosGrafico, setDatosGrafico] = useState<PrecioAccion[]>([]);
+  const [loadingGrafico, setLoadingGrafico] = useState(false);
+  const graficoFetchId = useRef(0);
+
+  /* Opción 7d eliminada: migrar sesiones antiguas */
+  useEffect(() => {
+    if (rangoGrafico === '7d') setRangoGrafico('30d');
+  }, [rangoGrafico]);
 
   /* Borrar portafolio — requiere confirmación */
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
@@ -209,6 +246,46 @@ export const Seguimiento = () => {
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paginaFav, favoritos]);
+
+  /* ── Cargar datos del gráfico: rango con getPreciosRango; fallback a getPrecios + filtro ── */
+  useEffect(() => {
+    if (!simboloGrafico) return;
+    const id = ++graficoFetchId.current;
+    setLoadingGrafico(true);
+    const { inicio, fin } = inicioFinDesdeRangoGrafico(rangoGrafico);
+    const t0 = new Date(inicio).getTime();
+    const t1 = new Date(fin).getTime();
+
+    (async () => {
+      try {
+        let data: PrecioAccion[] = [];
+        try {
+          data = await getPreciosRango(simboloGrafico, inicio, fin);
+        } catch {
+          data = [];
+        }
+        if (id !== graficoFetchId.current) return;
+        if (data.length === 0) {
+          const all = await getPrecios(simboloGrafico);
+          if (id !== graficoFetchId.current) return;
+          data = all.filter((p) => {
+            const t = new Date(p.fecha).getTime();
+            return t >= t0 && t <= t1;
+          });
+        }
+        if (id !== graficoFetchId.current) return;
+        setDatosGrafico(
+          [...data].sort(
+            (a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
+          )
+        );
+      } catch {
+        if (id === graficoFetchId.current) setDatosGrafico([]);
+      } finally {
+        if (id === graficoFetchId.current) setLoadingGrafico(false);
+      }
+    })();
+  }, [simboloGrafico, rangoGrafico]);
 
   /* ── Filtrar sugerencias mientras el usuario escribe ── */
   useEffect(() => {
@@ -621,10 +698,13 @@ export const Seguimiento = () => {
 
           {/* Tabla watchlist — móvil: tarjetas; sm+: tabla */}
           <div className="rounded-2xl bg-white/[0.02] border border-white/5 overflow-hidden">
-            {/* Cabecera móvil */}
-            <div className="sm:hidden flex items-center justify-between px-4 py-3 border-b border-white/5 text-[10px] uppercase font-bold tracking-wider text-zinc-500">
-              <span>Símbolo / Empresa</span>
-              <span className="shrink-0 pl-2">Precio · Var.</span>
+            {/* Cabecera móvil — columnas alineadas con la nueva fila compacta */}
+            <div className="sm:hidden flex items-center gap-3 px-4 py-2.5 border-b border-white/5 text-[9px] uppercase font-bold tracking-wider text-zinc-600">
+              <div className="size-8 shrink-0" aria-hidden />
+              <span className="flex-1">Símbolo</span>
+              <span className="w-[80px] shrink-0 text-right">Tendencia</span>
+              <span className="w-[72px] shrink-0 text-right">Precio · Var.</span>
+              <div className="w-[26px] shrink-0" aria-hidden />
             </div>
             {/* Cabecera escritorio — flex: izquierda flexible, métricas agrupadas a la derecha */}
             <div className="hidden sm:flex items-center gap-4 px-5 py-3 text-[10px] uppercase font-bold tracking-widest text-zinc-600 border-b border-white/5">
@@ -695,52 +775,53 @@ export const Seguimiento = () => {
                   const sectorCat = catalogo.find(c => c.simbolo === fav.simbolo)?.sector;
                   return (
                     <React.Fragment key={fav.id}>
-                      {/* Móvil: tarjeta apilada */}
+                      {/* Móvil: fila compacta en una línea */}
                       <motion.div
                         initial={{ opacity: 0, y: 6 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, x: -20 }}
                         transition={{ delay: i * 0.04 }}
-                        className="sm:hidden px-4 py-3 border-b border-white/5 last:border-0 space-y-3 hover:bg-white/[0.02] transition-colors"
+                        className="sm:hidden flex items-center gap-3 px-4 py-3 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors"
                       >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <div className="size-9 rounded-xl bg-[#0a0a0a] border border-white/10 flex items-center justify-center font-bold text-[10px] text-zinc-300 shrink-0">
-                              {fav.simbolo.substring(0, 2)}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="font-bold text-white text-sm">{fav.simbolo}</p>
-                              <p className="text-[11px] text-zinc-500 leading-snug line-clamp-2">{fav.nombreEmpresa || '—'}</p>
-                            </div>
-                          </div>
-                          {canDelete && (
-                            <button
-                              type="button"
-                              onClick={() => handleEliminar(fav.simbolo)}
-                              title="Eliminar de favoritos"
-                              className="p-2 rounded-lg text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
-                            >
-                              <Trash2 className="size-4" />
-                            </button>
-                          )}
+                        {/* Avatar */}
+                        <div className="size-8 rounded-lg bg-[#0a0a0a] border border-white/10 flex items-center justify-center font-bold text-[9px] text-zinc-300 shrink-0">
+                          {fav.simbolo.substring(0, 2)}
                         </div>
-                        <div className="flex items-end justify-between gap-4 pl-0.5">
-                          <div>
-                            <p className="text-[9px] uppercase font-bold text-zinc-600 tracking-wider mb-0.5">Precio</p>
-                            {p
-                              ? <p className="font-bold text-white text-lg tabular-nums">${Number(p.close).toFixed(2)}</p>
-                              : <Skeleton className="h-6 w-24" />}
-                          </div>
-                          <div className="text-right shrink-0">
-                            <p className="text-[9px] uppercase font-bold text-zinc-600 tracking-wider mb-0.5">Variación</p>
-                            <div className="flex flex-col items-end gap-1">
-                              {spark.length > 1 && <Sparkline data={spark} compact positive={isUp} />}
-                              <span className={cn('text-sm font-bold tabular-nums', isUp ? 'text-emerald-400' : 'text-red-400')}>
-                                {pct}
-                              </span>
-                            </div>
-                          </div>
+
+                        {/* Nombre + empresa */}
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-white text-sm leading-none">{fav.simbolo}</p>
+                          <p className="text-[10px] text-zinc-500 truncate mt-0.5">{fav.nombreEmpresa || '—'}</p>
                         </div>
+
+                        {/* Sparkline */}
+                        {spark.length > 1 && (
+                          <div className="shrink-0">
+                            <Sparkline data={spark} compact positive={isUp} />
+                          </div>
+                        )}
+
+                        {/* Precio + variación */}
+                        <div className="text-right shrink-0">
+                          {p
+                            ? <p className="font-bold text-white text-sm tabular-nums leading-none">${Number(p.close).toFixed(2)}</p>
+                            : <Skeleton className="h-4 w-16" />}
+                          <span className={cn('text-xs font-bold tabular-nums', isUp ? 'text-emerald-400' : 'text-red-400')}>
+                            {pct}
+                          </span>
+                        </div>
+
+                        {/* Botón eliminar */}
+                        {canDelete && (
+                          <button
+                            type="button"
+                            onClick={() => handleEliminar(fav.simbolo)}
+                            title="Eliminar de favoritos"
+                            className="p-1.5 rounded-lg text-zinc-700 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        )}
                       </motion.div>
                       {/* Escritorio: flex — nombre usa el espacio; precio+tendencia agrupados */}
                       <motion.div
@@ -842,7 +923,66 @@ export const Seguimiento = () => {
               </button>
             </div>
           )}
+
         </div>
+
+        {/* Historial: fila a ancho completo en desktop */}
+        {favoritos.length > 0 && (
+          <div className="col-span-1 lg:col-span-4 mt-6 pt-6 border-t border-white/5 w-full min-w-0">
+            <div className="flex items-center gap-2 mb-4">
+              <Activity className="size-4 text-[#D4AF37]" />
+              <h3 className="text-sm font-semibold text-white">Historial de Precios de tu Portafolio</h3>
+            </div>
+
+            <div className="flex flex-wrap gap-2 mb-4">
+              {favoritos.map(fav => (
+                <button
+                  key={fav.simbolo}
+                  onClick={() => setSimboloGrafico(fav.simbolo)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-lg text-xs font-medium transition-all border',
+                    simboloGrafico === fav.simbolo
+                      ? 'bg-[#D4AF37]/20 border-[#D4AF37]/40 text-[#D4AF37]'
+                      : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white hover:border-white/20'
+                  )}
+                >
+                  {fav.simbolo}
+                </button>
+              ))}
+            </div>
+
+            {simboloGrafico ? (
+                loadingGrafico ? (
+                  <div className="h-[320px] rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-center">
+                    <div className="flex items-center gap-3 text-zinc-500">
+                      <div className="w-5 h-5 border-2 border-zinc-600 border-t-[#D4AF37] rounded-full animate-spin" />
+                      <span className="text-sm">Cargando datos...</span>
+                    </div>
+                  </div>
+                ) : (
+                  <ChartHistorial
+                    data={datosGrafico.map(p => ({
+                      fecha: p.fecha,
+                      close: Number(p.close),
+                      open: Number(p.open),
+                      high: Number(p.high),
+                      low: Number(p.low),
+                    }))}
+                    simbolo={simboloGrafico}
+                    timeRange={rangoGrafico}
+                    onTimeRangeChange={setRangoGrafico}
+                  />
+                )
+              ) : (
+                <div className="h-[200px] rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-center">
+                  <div className="text-center">
+                    <TrendingUp className="size-8 text-zinc-700 mx-auto mb-2" />
+                    <p className="text-sm text-zinc-500">Selecciona un símbolo para ver su gráfico</p>
+                  </div>
+                </div>
+              )}
+            </div>
+        )}
       </div>
     </div>
   );

@@ -4,8 +4,10 @@ import { Announcement, AnnouncementTag, AnnouncementTitle } from "@/components/u
 import { Bot } from "lucide-react"
 import MotionTiles from "@/components/ui/motion-tiles"
 import FAQWithSpiral from "@/components/ui/faq-section"
+import { PerspectiveMarqueeBand } from "@/components/PerspectiveDemo"
 import { SiteFooter } from "@/components/site-footer"
 import { OpeningScramble } from "@/components/opening-scramble"
+import { BentoSection } from "@/components/bento-section"
 
 export const Home = () => {
     return (
@@ -26,11 +28,17 @@ export const Home = () => {
                     </AnnouncementTitle>
                 </Announcement>
             </div>
-            <section id='demo' className='scroll-mt-28' aria-label='Demostración interactiva'>
-                <LaserFlowBoxExample />
-            </section>
-            <div className="h-6 shrink-0 md:h-12" aria-hidden />
-            <MotionTiles />
+<section id='demo' className='scroll-mt-28' aria-label='Demostración interactiva'>
+        <LaserFlowBoxExample />
+      </section>
+      <div className="h-6 shrink-0 md:h-12" aria-hidden />
+      <BentoSection />
+      <div className="h-6 shrink-0 md:h-12" aria-hidden />
+      <MotionTiles />
+            <br />
+            <PerspectiveMarqueeBand />
+            <br />
+            <br />
             <FAQWithSpiral />
 
             {/* Command Center Section */}

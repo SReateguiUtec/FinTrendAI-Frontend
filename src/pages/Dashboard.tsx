@@ -9,7 +9,7 @@ import { Seguimiento } from './dashboard/Seguimiento';
 import { Analitica } from './dashboard/Analitica';
 import { Senales } from './dashboard/Senales';
 import { Noticias } from './dashboard/Noticias';
-import AiChat from '@/components/aichat';
+import { FloatingChatWidget } from '@/components/ui/FloatingChat';
 
 const Dashboard = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -32,7 +32,7 @@ const Dashboard = () => {
         </main>
       </div>
 
-      <AiChat />
+      <FloatingChatWidget />
     </div>
   );
 };
