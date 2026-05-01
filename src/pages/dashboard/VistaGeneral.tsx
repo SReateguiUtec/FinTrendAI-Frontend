@@ -118,7 +118,7 @@ export const VistaGeneral = () => {
         <StatCard
           label="Símbolos activos"
           value={cantidadSimbolosActivos === null ? '…' : String(cantidadSimbolosActivos)}
-          change="Catálogo MS2"
+          change="Empresas"
           trend="up"
           icon={Layers}
           subValue="En el catálogo con precios y noticias indexados"

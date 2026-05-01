@@ -4,9 +4,9 @@ import React, { useState, useEffect, useRef } from 'react';
 const PRIMARY = "#ff6600";
 const PRIMARY_BRIGHT = "#ffaa00";
 const DARK_PRIMARY = "rgba(255, 102, 0, 0.3)";
-const BG = "transparent"; 
-const UP_COLOR = "#4ade80"; 
-const DOWN_COLOR = "#f87171"; 
+const BG = "transparent";
+const UP_COLOR = "#4ade80";
+const DOWN_COLOR = "#f87171";
 
 const INITIAL_STOCKS = [
   { sym: "AAPL", price: 190.42, chg: 3.24 },
@@ -60,13 +60,13 @@ export default function RetroBloomberg() {
   return (
     <div style={{
       backgroundColor: BG, color: PRIMARY, fontFamily: "'Share Tech Mono', monospace",
-      width: "100%", 
+      width: "100%",
       height: "305px",
       padding: "6px", display: "flex", flexDirection: "column",
       overflow: "hidden", position: "relative", textTransform: "uppercase",
       fontSize: "9px", boxSizing: "border-box"
     }}>
-      
+
       {/* SCANLINES CRT */}
       <div style={{
         position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
@@ -75,25 +75,25 @@ export default function RetroBloomberg() {
       }} />
 
       {/* 1. HEADER */}
-      <div style={{ 
-        display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${PRIMARY}`, 
-        paddingBottom: "2px", marginBottom: "4px", flexShrink: 0 
+      <div style={{
+        display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${PRIMARY}`,
+        paddingBottom: "2px", marginBottom: "4px", flexShrink: 0
       }}>
         <div style={{ fontWeight: "bold" }}><span style={{ backgroundColor: PRIMARY, color: "#000", padding: "0 3px" }}>BBG</span> FINTREND AI</div>
         <div style={{ fontSize: "8px" }}>{time}</div>
       </div>
 
       {/* 2. TICKER REORGANIZADO CON COLORES DINÁMICOS */}
-      <div style={{ 
-        borderBottom: `1px solid ${DARK_PRIMARY}`, 
-        paddingBottom: "2px", 
-        marginBottom: "4px", 
-        flexShrink: 0, 
-        overflow: "hidden" 
+      <div style={{
+        borderBottom: `1px solid ${DARK_PRIMARY}`,
+        paddingBottom: "2px",
+        marginBottom: "4px",
+        flexShrink: 0,
+        overflow: "hidden"
       }}>
-        <div style={{ 
-          display: "flex", 
-          whiteSpace: "nowrap", 
+        <div style={{
+          display: "flex",
+          whiteSpace: "nowrap",
           animation: "ticker-anim 25s linear infinite",
           fontSize: "8.5px"
         }}>
@@ -101,15 +101,15 @@ export default function RetroBloomberg() {
           {[...stocks, ...stocks].map((s, idx) => {
             const isUp = s.chg >= 0;
             const color = isUp ? UP_COLOR : DOWN_COLOR;
-            
+
             return (
               <span key={`${s.sym}-${idx}`} style={{ marginRight: "30px", fontWeight: "500" }}>
                 {/* Ticker en ámbar/dorado fijo */}
                 <span style={{ color: PRIMARY }}>{s.sym}</span>
-                
+
                 {/* Precio y porcentaje con color dinámico */}
                 <span style={{ color: color, marginLeft: "5px" }}>
-                  {s.price.toFixed(2)} {isUp ? "▲" : "▼"} 
+                  {s.price.toFixed(2)} {isUp ? "▲" : "▼"}
                   {Math.abs((s.chg / s.price) * 100).toFixed(2)}%
                 </span>
               </span>
@@ -120,7 +120,7 @@ export default function RetroBloomberg() {
 
       {/* 3. ÁREA DE DATOS */}
       <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: "6px", flex: 1, minHeight: 0 }}>
-        
+
         <section style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
           <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "4px", flexShrink: 0 }}>
             <thead>
@@ -136,34 +136,34 @@ export default function RetroBloomberg() {
           </table>
 
           {/* GRÁFICO SVG */}
-          <div style={{ 
-            flex: 1, minHeight: 0, border: `1px solid ${DARK_PRIMARY}`, 
-            position: "relative", backgroundColor: "rgba(212, 175, 55, 0.05)" 
+          <div style={{
+            flex: 1, minHeight: 0, border: `1px solid ${DARK_PRIMARY}`,
+            position: "relative", backgroundColor: "rgba(212, 175, 55, 0.05)"
           }}>
-             <svg width="100%" height="100%" viewBox="0 0 1000 100" preserveAspectRatio="none" style={{ display: "block" }}>
-                <polyline 
-                  fill="none" stroke={PRIMARY} strokeWidth="1.5" vectorEffect="non-scaling-stroke" 
-                  points={points} style={{ transition: "all 0.4s linear" }} 
-                />
-             </svg>
+            <svg width="100%" height="100%" viewBox="0 0 1000 100" preserveAspectRatio="none" style={{ display: "block" }}>
+              <polyline
+                fill="none" stroke={PRIMARY} strokeWidth="1.5" vectorEffect="non-scaling-stroke"
+                points={points} style={{ transition: "all 0.4s linear" }}
+              />
+            </svg>
           </div>
         </section>
 
         {/* LOGS */}
         <aside style={{ border: `1px solid ${DARK_PRIMARY}`, padding: "4px", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-           <div style={{ color: PRIMARY_BRIGHT, fontSize: "8px", borderBottom: `1px solid ${DARK_PRIMARY}`, marginBottom: "2px", flexShrink: 0 }}>// LOGS</div>
-           <div style={{ flex: 1, overflow: "hidden" }}>
-             {logs.map((log, i) => (
-               <div key={i} style={{ opacity: 1 - (i * 0.25), marginBottom: "2px", fontSize: "8px", whiteSpace: "nowrap" }}>{log}</div>
-             ))}
-           </div>
+          <div style={{ color: PRIMARY_BRIGHT, fontSize: "8px", borderBottom: `1px solid ${DARK_PRIMARY}`, marginBottom: "2px", flexShrink: 0 }}>// LOGS</div>
+          <div style={{ flex: 1, overflow: "hidden" }}>
+            {logs.map((log, i) => (
+              <div key={i} style={{ opacity: 1 - (i * 0.25), marginBottom: "2px", fontSize: "8px", whiteSpace: "nowrap" }}>{log}</div>
+            ))}
+          </div>
         </aside>
       </div>
 
       {/* 4. FOOTER CENTRADO */}
-      <div style={{ 
-        marginTop: "4px", borderTop: `1px solid ${DARK_PRIMARY}`, paddingTop: "3px", 
-        display: "flex", alignItems: "center", fontSize: "8px", flexShrink: 0 
+      <div style={{
+        marginTop: "4px", borderTop: `1px solid ${DARK_PRIMARY}`, paddingTop: "3px",
+        display: "flex", alignItems: "center", fontSize: "8px", flexShrink: 0
       }}>
         <span style={{ flex: 1, textAlign: "left" }}>LAPT 1 / BBG</span>
         <span style={{ flex: 1, textAlign: "center", color: UP_COLOR, opacity: mktVis ? 1 : 0.3, fontWeight: "bold" }}>

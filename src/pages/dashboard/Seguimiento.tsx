@@ -224,9 +224,15 @@ export const Seguimiento = () => {
     Promise.all(
       pendientes.map(async (f) => {
         try {
+          const finD = new Date();
+          const iniD = new Date();
+          iniD.setDate(finD.getDate() - 30);
+          const finStr = `${toISODateLocal(finD)}T23:59:59`;
+          const iniStr = `${toISODateLocal(iniD)}T00:00:00`;
+
           const [ultimo, hist] = await Promise.all([
             getUltimoPrecio(f.simbolo),
-            getPrecios(f.simbolo).catch(() => [] as PrecioAccion[]),
+            getPreciosRango(f.simbolo, iniStr, finStr).catch(() => [] as PrecioAccion[]),
           ]);
           return {
             simbolo: f.simbolo,
