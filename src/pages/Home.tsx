@@ -28,24 +28,22 @@ export const Home = () => {
                     </AnnouncementTitle>
                 </Announcement>
             </div>
-<section id='demo' className='scroll-mt-28' aria-label='Demostración interactiva'>
-        <LaserFlowBoxExample />
-      </section>
-      <div className="h-6 shrink-0 md:h-12" aria-hidden />
-      <BentoSection />
-      <div className="h-6 shrink-0 md:h-12" aria-hidden />
-      <MotionTiles />
+            <section id='demo' className='scroll-mt-28' aria-label='Demostración interactiva'>
+                <LaserFlowBoxExample />
+            </section>
+            <div className="h-6 shrink-0 md:h-12" aria-hidden />
+            <BentoSection />
+            <div className="h-6 shrink-0 md:h-12" aria-hidden />
+            <MotionTiles />
             <br />
             <PerspectiveMarqueeBand />
             <br />
             <br />
             <FAQWithSpiral />
-
             {/* Command Center Section */}
             <div id='comando' className='scroll-mt-28'>
                 <OpeningScramble />
             </div>
-
             <SiteFooter />
         </div>
     )
