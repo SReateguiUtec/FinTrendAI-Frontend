@@ -1,6 +1,6 @@
 <div align="center">
 
-# FinTrend Frontend
+# FinTrend
 
 Frontend web de **FinTrend**, una plataforma de analisis financiero con landing page, dashboard, noticias, senales de trading, seguimiento de portafolios y visualizaciones interactivas.
 
