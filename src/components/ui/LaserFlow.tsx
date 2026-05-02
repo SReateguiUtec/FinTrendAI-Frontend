@@ -335,7 +335,7 @@ export const LaserFlow: React.FC<Props> = ({
     rendererRef.current = renderer;
 
     const isMobile = window.innerWidth < 768;
-    baseDprRef.current = Math.min(dpr ?? (window.devicePixelRatio || 1), isMobile ? 1 : 2);
+    baseDprRef.current = Math.min(dpr ?? (window.devicePixelRatio || 1), isMobile ? 1.5 : 2);
     currentDprRef.current = baseDprRef.current;
 
     renderer.setPixelRatio(currentDprRef.current);
@@ -380,9 +380,21 @@ export const LaserFlow: React.FC<Props> = ({
     };
     uniformsRef.current = uniforms;
 
+    let activeFrag = FRAG;
+    if (isMobile) {
+      activeFrag = activeFrag
+        .replace('#define FOG_OCTAVES 5', '#define FOG_OCTAVES 2')
+        .replace('#define TAP_RADIUS 6', '#define TAP_RADIUS 3')
+        .replace('#define DT_LOCAL 0.0038', '#define DT_LOCAL 0.0076')
+        .replace(
+          'n=fbm2(fuv+vec2(fbm2(fuv+vec2(7.3,2.1)),fbm2(fuv+vec2(-3.7,5.9)))*0.6);',
+          'n=fbm2(fuv+vec2(fbm2(fuv+vec2(7.3,2.1)))*0.6);'
+        );
+    }
+
     const material = new THREE.RawShaderMaterial({
       vertexShader: VERT,
-      fragmentShader: FRAG,
+      fragmentShader: activeFrag,
       uniforms,
       transparent: false,
       depthTest: false,
@@ -483,7 +495,7 @@ export const LaserFlow: React.FC<Props> = ({
     let raf = 0;
 
     const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
-    const dprFloor = isMobile ? 0.4 : 0.6;
+    const dprFloor = isMobile ? 0.75 : 0.6;
     const lowerThresh = 50;
     const upperThresh = 58;
     let lastDprChange = 0;
