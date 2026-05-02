@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Zap, Newspaper, LineChart, ArrowUpRight, TrendingUp, BarChart3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getSimbolos } from '@/services/precios';
 
 const QUICK_SYMBOLS = ['AAPL', 'NVDA', 'MSFT', 'GOOGL', 'TSLA', 'AMZN', 'META'];
 
@@ -27,11 +28,9 @@ export const SearchBar = () => {
 
   // Cargar catálogo real desde MS2 al montar el componente
   useEffect(() => {
-    import('@/services/precios').then(({ getSimbolos }) => {
-      getSimbolos()
-        .then(list => setCatalogo(list.map(s => ({ simbolo: s.simbolo, nombre: s.nombre }))))
-        .catch(() => setCatalogo(QUICK_SYMBOLS.map(s => ({ simbolo: s, nombre: '' }))));
-    });
+    getSimbolos()
+      .then(list => setCatalogo(list.map(s => ({ simbolo: s.simbolo, nombre: s.nombre }))))
+      .catch(() => setCatalogo(QUICK_SYMBOLS.map(s => ({ simbolo: s, nombre: '' }))));
   }, []);
 
   // Símbolos filtrados: usa catálogo real si está disponible, si no usa hardcoded
