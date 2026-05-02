@@ -382,14 +382,8 @@ export const LaserFlow: React.FC<Props> = ({
 
     let activeFrag = FRAG;
     if (isMobile) {
-      activeFrag = activeFrag
-        .replace('#define FOG_OCTAVES 5', '#define FOG_OCTAVES 2')
-        .replace('#define TAP_RADIUS 6', '#define TAP_RADIUS 3')
-        .replace('#define DT_LOCAL 0.0038', '#define DT_LOCAL 0.0076')
-        .replace(
-          'n=fbm2(fuv+vec2(fbm2(fuv+vec2(7.3,2.1)),fbm2(fuv+vec2(-3.7,5.9)))*0.6);',
-          'n=fbm2(fuv+vec2(fbm2(fuv+vec2(7.3,2.1)))*0.6);'
-        );
+      // Only reduce fog octaves slightly. The other math simplifications caused visual banding.
+      activeFrag = activeFrag.replace('#define FOG_OCTAVES 5', '#define FOG_OCTAVES 3');
     }
 
     const material = new THREE.RawShaderMaterial({
