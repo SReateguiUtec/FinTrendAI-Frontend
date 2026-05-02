@@ -334,7 +334,8 @@ export const LaserFlow: React.FC<Props> = ({
     });
     rendererRef.current = renderer;
 
-    baseDprRef.current = Math.min(dpr ?? (window.devicePixelRatio || 1), 2);
+    const isMobile = window.innerWidth < 768;
+    baseDprRef.current = Math.min(dpr ?? (window.devicePixelRatio || 1), isMobile ? 1 : 2);
     currentDprRef.current = baseDprRef.current;
 
     renderer.setPixelRatio(currentDprRef.current);
@@ -482,7 +483,7 @@ export const LaserFlow: React.FC<Props> = ({
     let raf = 0;
 
     const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
-    const dprFloor = 0.6;
+    const dprFloor = isMobile ? 0.4 : 0.6;
     const lowerThresh = 50;
     const upperThresh = 58;
     let lastDprChange = 0;

@@ -125,9 +125,14 @@ const useAnimationLoop = (
     isVertical: boolean
 ) => {
     const rafRef = useRef<number | null>(null);
+    const animationRef = useRef<Animation | null>(null);
+    const playbackRateRef = useRef<number>(1);
     const lastTimestampRef = useRef<number | null>(null);
-    const offsetRef = useRef(0);
-    const velocityRef = useRef(0);
+
+    const hoverStateRef = useRef({ isHovered, hoverSpeed, targetVelocity });
+    useEffect(() => {
+        hoverStateRef.current = { isHovered, hoverSpeed, targetVelocity };
+    }, [isHovered, hoverSpeed, targetVelocity]);
 
     useEffect(() => {
         const track = trackRef.current;
@@ -140,22 +145,50 @@ const useAnimationLoop = (
 
         const seqSize = isVertical ? seqHeight : seqWidth;
 
-        if (seqSize > 0) {
-            offsetRef.current = ((offsetRef.current % seqSize) + seqSize) % seqSize;
-            const transformValue = isVertical
-                ? `translate3d(0, ${-offsetRef.current}px, 0)`
-                : `translate3d(${-offsetRef.current}px, 0, 0)`;
-            track.style.transform = transformValue;
-        }
-
-        if (prefersReduced) {
+        if (seqSize <= 0 || prefersReduced) {
             track.style.transform = isVertical ? 'translate3d(0, 0, 0)' : 'translate3d(0, 0, 0)';
-            return () => {
-                lastTimestampRef.current = null;
-            };
+            if (animationRef.current) {
+                animationRef.current.cancel();
+                animationRef.current = null;
+            }
+            return;
         }
 
-        const animate = (timestamp: number) => {
+        const direction = targetVelocity > 0 ? -1 : 1;
+        const duration = (seqSize / Math.max(Math.abs(targetVelocity), 0.001)) * 1000;
+
+        const keyframes = isVertical
+            ? [
+                  { transform: 'translate3d(0, 0, 0)' },
+                  { transform: `translate3d(0, ${direction * seqSize}px, 0)` }
+              ]
+            : [
+                  { transform: 'translate3d(0, 0, 0)' },
+                  { transform: `translate3d(${direction * seqSize}px, 0, 0)` }
+              ];
+
+        let startProgress = 0;
+        if (animationRef.current) {
+            const currentT = animationRef.current.currentTime as number;
+            const currentDur = animationRef.current.effect?.getTiming()?.duration as number;
+            if (currentDur > 0) {
+                startProgress = (currentT / currentDur) % 1;
+            }
+            animationRef.current.cancel();
+        }
+
+        const animation = track.animate(keyframes, {
+            duration,
+            iterations: Infinity,
+            easing: 'linear'
+        });
+
+        // Try to maintain visual continuity when recreating the animation
+        animation.currentTime = startProgress * duration;
+        animation.playbackRate = playbackRateRef.current;
+        animationRef.current = animation;
+
+        const animatePlaybackRate = (timestamp: number) => {
             if (lastTimestampRef.current === null) {
                 lastTimestampRef.current = timestamp;
             }
@@ -163,35 +196,30 @@ const useAnimationLoop = (
             const deltaTime = Math.max(0, timestamp - lastTimestampRef.current) / 1000;
             lastTimestampRef.current = timestamp;
 
-            const target = isHovered && hoverSpeed !== undefined ? hoverSpeed : targetVelocity;
+            const { isHovered: hov, hoverSpeed: hSpd, targetVelocity: tVel } = hoverStateRef.current;
+            const targetSpeed = hov && hSpd !== undefined ? hSpd : tVel;
+            const targetRate = tVel === 0 ? 0 : targetSpeed / tVel;
 
             const easingFactor = 1 - Math.exp(-deltaTime / ANIMATION_CONFIG.SMOOTH_TAU);
-            velocityRef.current += (target - velocityRef.current) * easingFactor;
+            playbackRateRef.current += (targetRate - playbackRateRef.current) * easingFactor;
 
-            if (seqSize > 0) {
-                let nextOffset = offsetRef.current + velocityRef.current * deltaTime;
-                nextOffset = ((nextOffset % seqSize) + seqSize) % seqSize;
-                offsetRef.current = nextOffset;
-
-                const transformValue = isVertical
-                    ? `translate3d(0, ${-offsetRef.current}px, 0)`
-                    : `translate3d(${-offsetRef.current}px, 0, 0)`;
-                track.style.transform = transformValue;
+            if (animationRef.current) {
+                animationRef.current.playbackRate = playbackRateRef.current;
             }
 
-            rafRef.current = requestAnimationFrame(animate);
+            rafRef.current = requestAnimationFrame(animatePlaybackRate);
         };
 
-        rafRef.current = requestAnimationFrame(animate);
+        lastTimestampRef.current = performance.now();
+        rafRef.current = requestAnimationFrame(animatePlaybackRate);
 
         return () => {
             if (rafRef.current !== null) {
                 cancelAnimationFrame(rafRef.current);
                 rafRef.current = null;
             }
-            lastTimestampRef.current = null;
         };
-    }, [targetVelocity, seqWidth, seqHeight, isHovered, hoverSpeed, isVertical]);
+    }, [targetVelocity, seqWidth, seqHeight, isVertical]);
 };
 
 export const LogoLoop = React.memo<LogoLoopProps>(
