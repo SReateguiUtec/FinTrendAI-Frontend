@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { LaserFlow } from './ui/LaserFlow';
-import RetroBloomberg from './RetroTerminal';
+import RetroTerminalV2 from './RetroTerminalV2';
 
 export function LaserFlowBoxExample() {
   const revealImgRef = useRef(null);
@@ -38,7 +38,7 @@ export function LaserFlowBoxExample() {
         left: '50%',
         transform: 'translate(-50%)',
         width: '86%',
-        height: '60%',
+        height: '54.7%',
         backgroundColor: '#0a0a0a',
         backgroundImage: 'radial-gradient(circle at center, rgba(212, 175, 55, 0.11) 1px, transparent 1px)',
         backgroundSize: '16px 16px',
@@ -78,7 +78,7 @@ export function LaserFlowBoxExample() {
               flexDirection: 'column',
             }}
           >
-            <RetroBloomberg />
+            <RetroTerminalV2 />
           </div>
         </div>
       </div>

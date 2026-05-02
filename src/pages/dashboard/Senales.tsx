@@ -122,14 +122,20 @@ export const Senales = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(-1);
 
-  /* Sugerencias de símbolos */
   const [catalogo, setCatalogo] = useState<Simbolo[]>([]);
   const [sugerencias, setSugerencias] = useState<Simbolo[]>([]);
   const [showSugerencias, setShowSugerencias] = useState(false);
+  const [catalogoCargado, setCatalogoCargado] = useState(false);
+
+  // Validación en tiempo real del símbolo
+  const simboloValido = !catalogoCargado || catalogo.some(s => s.simbolo === simbolo.trim().toUpperCase());
+  const mostrarErrorSimbolo = simbolo.trim().length >= 1 && catalogoCargado && !simboloValido;
 
   const handleBuscar = useCallback(async (sym: string) => {
     const s = sym.trim().toUpperCase();
     if (!s) return;
+    // Validar que el símbolo exista en el catálogo (si el catálogo ya cargó)
+    if (catalogoCargado && !catalogo.some(c => c.simbolo === s)) return;
     setSimbolo(s);
     setShowSugerencias(false);
     setLoading(true);
@@ -160,10 +166,13 @@ export const Senales = () => {
       setCurrentStep(-1);
       setLoading(false);
     }
-  }, []);
+  }, [catalogo, catalogoCargado]);
 
   useEffect(() => {
-    getSimbolos().then(setCatalogo).catch(() => {});
+    getSimbolos().then(list => {
+      setCatalogo(list);
+      setCatalogoCargado(true);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -187,12 +196,17 @@ export const Senales = () => {
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
+    if (!catalogoCargado) return; // Esperar a que cargue el catálogo antes de ejecutar
     const sym = searchParams.get('sym');
     if (sym) {
-      setSimbolo(sym.toUpperCase());
-      handleBuscar(sym);
+      const s = sym.toUpperCase();
+      setSimbolo(s);
+      // Solo ejecutar si el símbolo es válido
+      if (catalogo.some(c => c.simbolo === s)) {
+        handleBuscar(s);
+      }
     }
-  }, [searchParams, handleBuscar]);
+  }, [searchParams, handleBuscar, catalogoCargado, catalogo]);
 
   const colorConfianza = (c: number) =>
     c >= 70 ? 'bg-emerald-500' : c >= 40 ? 'bg-[#D4AF37]' : 'bg-red-500';
@@ -252,8 +266,14 @@ export const Senales = () => {
               onChange={e => { setSimbolo(e.target.value.toUpperCase()); setShowSugerencias(true); }}
               onFocus={() => setShowSugerencias(true)}
               onBlur={() => setTimeout(() => setShowSugerencias(false), 150)}
-              onKeyDown={e => e.key === 'Enter' && handleBuscar(simbolo)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-[#D4AF37]/50 placeholder:text-zinc-600 transition-all"
+              onKeyDown={e => e.key === 'Enter' && !mostrarErrorSimbolo && handleBuscar(simbolo)}
+              className={`w-full bg-white/5 border rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none placeholder:text-zinc-600 transition-all ${
+                mostrarErrorSimbolo
+                  ? 'border-red-500/50 focus:border-red-500/70'
+                  : simbolo && simboloValido && catalogoCargado
+                  ? 'border-emerald-500/40 focus:border-emerald-500/60'
+                  : 'border-white/10 focus:border-[#D4AF37]/50'
+              }`}
             />
 
             {/* Sugerencias */}
@@ -283,8 +303,8 @@ export const Senales = () => {
           </div>
           <button
             onClick={() => handleBuscar(simbolo)}
-            disabled={loading || !simbolo.trim()}
-            className="px-5 py-3 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-sm font-bold hover:bg-[#D4AF37]/20 transition-all disabled:opacity-50 flex items-center gap-2"
+            disabled={loading || !simbolo.trim() || mostrarErrorSimbolo}
+            className="px-5 py-3 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-sm font-bold hover:bg-[#D4AF37]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {loading ? <Loader2 className="size-4 animate-spin" /> : <Zap className="size-4" />}
             Analizar
@@ -304,6 +324,18 @@ export const Senales = () => {
             </button>
           ))}
         </div>
+
+        {/* Mensaje de validación */}
+        {mostrarErrorSimbolo && (
+          <motion.p
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-1.5 text-xs text-red-400 pl-1"
+          >
+            <AlertCircle className="size-3" />
+            Símbolo no encontrado en el catálogo. Usa los accesos rápidos o busca uno válido.
+          </motion.p>
+        )}
       </motion.div>
 
       {/* Resultado */}

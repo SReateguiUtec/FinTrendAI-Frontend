@@ -10,14 +10,14 @@ import { Marquee } from "@/components/ui/marquee"
 
 // ── Stock Tickers ─────────────────────────────────────────────────────────────
 const stocks = [
-  { sym: "AAPL", name: "Apple Inc.",   price: "$183.42", change: "+1.24%", pos: true  },
-  { sym: "NVDA", name: "NVIDIA Corp",  price: "$891.20", change: "+5.82%", pos: true  },
-  { sym: "TSLA", name: "Tesla Inc.",   price: "$248.73", change: "+2.14%", pos: true  },
-  { sym: "MSFT", name: "Microsoft",   price: "$420.55", change: "+1.22%", pos: true  },
-  { sym: "AMZN", name: "Amazon",      price: "$185.61", change: "-0.73%", pos: false },
-  { sym: "META", name: "Meta",        price: "$520.30", change: "-1.05%", pos: false },
-  { sym: "GOOGL", name: "Alphabet",   price: "$175.98", change: "+0.89%", pos: true  },
-  { sym: "AMD",  name: "AMD",         price: "$165.42", change: "+3.15%", pos: true  },
+  { sym: "AAPL", name: "Apple Inc.", price: "$183.42", change: "+1.24%", pos: true },
+  { sym: "NVDA", name: "NVIDIA Corp", price: "$891.20", change: "+5.82%", pos: true },
+  { sym: "TSLA", name: "Tesla Inc.", price: "$248.73", change: "+2.14%", pos: true },
+  { sym: "MSFT", name: "Microsoft", price: "$420.55", change: "+1.22%", pos: true },
+  { sym: "AMZN", name: "Amazon", price: "$185.61", change: "-0.73%", pos: false },
+  { sym: "META", name: "Meta", price: "$520.30", change: "-1.05%", pos: false },
+  { sym: "GOOGL", name: "Alphabet", price: "$175.98", change: "+0.89%", pos: true },
+  { sym: "AMD", name: "AMD", price: "$165.42", change: "+3.15%", pos: true },
 ]
 
 function StockCard({ stock }: { stock: typeof stocks[0] }) {
@@ -47,9 +47,9 @@ function StockCard({ stock }: { stock: typeof stocks[0] }) {
 function ChatAIVisual() {
   const messages = [
     { role: "user", text: "¿Cómo está NVDA?" },
-    { role: "ai",   text: "NVDA subió +5.82% esta semana. Señal alcista con 91% de confianza." },
+    { role: "ai", text: "NVDA subió +5.82% esta semana. Señal alcista con 91% de confianza." },
     { role: "user", text: "¿Debo comprar?" },
-    { role: "ai",   text: "Señal de entrada favorable. RSI en 62, volumen +18%." },
+    { role: "ai", text: "Señal de entrada favorable. RSI en 62, volumen +18%." },
   ]
 
   return (
@@ -85,7 +85,7 @@ const features = [
   {
     Icon: Search,
     name: "Analiza",
-    description: "Nuestra IA procesa miles de datos en tiempo real para detectar patrones y oportunidades.",
+    description: "Nuestra IA analiza datos y detecta oportunidades para darte la mejor recomendación.",
     href: "#",
     cta: "Ver análisis",
     className: "col-span-3 lg:col-span-1",
@@ -102,7 +102,7 @@ const features = [
   },
   {
     Icon: Bell,
-    name: "Recibe Alertas",
+    name: "Recibe Alertas (Pronto)",
     description: "Notificaciones instantáneas cuando detectamos señales de compra, venta o eventos importantes.",
     href: "#",
     cta: "Configurar alertas",
