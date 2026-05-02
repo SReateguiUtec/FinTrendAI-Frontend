@@ -236,6 +236,13 @@ void mainImage(out vec4 fc,in vec2 frag){
     float bBias=mix(1.0,1.0-sPix,FOG_BOTTOM_BIAS);
     float browserFogIntensity = uFogIntensity;
     browserFogIntensity *= 1.8;
+    
+    // Reduce smoke/fog intensity heavily on mobile screens to prevent over-saturation
+    float cssWidth = iResolution.x / max(iResolution.z, 1.0);
+    if (cssWidth < 768.0) {
+        browserFogIntensity *= 0.35; 
+    }
+    
     float radialFade = 1.0 - smoothstep(0.0, 0.7, length(uvc) / 120.0);
     float safariFog = n * browserFogIntensity * bBias * bm * hW * radialFade;
     fog = safariFog;

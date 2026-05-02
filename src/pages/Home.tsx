@@ -14,7 +14,7 @@ export const Home = () => {
         <div className="min-h-screen w-full bg-[#0a0a0a]">
             <HeroSectionwithPixelBackground />
             <div className="h-6 shrink-0 md:h-6" aria-hidden />
-            <div className="flex justify-center px-4 pb-0 pt-1 md:-mt-2 md:pt-0">
+            <div className="flex justify-center px-4 pb-0 pt-1 md:-mt-2 md:pt-0 translate-y-6 relative z-10">
                 <Announcement
                     className="bg-[#0a0a0a]/30"
                     movingBorder
