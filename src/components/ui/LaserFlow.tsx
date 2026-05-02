@@ -382,8 +382,10 @@ export const LaserFlow: React.FC<Props> = ({
 
     let activeFrag = FRAG;
     if (isMobile) {
-      // Only reduce fog octaves slightly. The other math simplifications caused visual banding.
-      activeFrag = activeFrag.replace('#define FOG_OCTAVES 5', '#define FOG_OCTAVES 3');
+      // Reduce fog octaves and completely remove lateral wisps on mobile for a clean look and better performance
+      activeFrag = activeFrag
+        .replace('#define FOG_OCTAVES 5', '#define FOG_OCTAVES 3')
+        .replace('#define W_LANES 10', '#define W_LANES 0');
     }
 
     const material = new THREE.RawShaderMaterial({
