@@ -78,18 +78,6 @@ export const Analitica = () => {
     try {
       const data = await analiticaService.getRendimientoSimbolo(simboloAAnalizar);
       setRendimientoActivo(data || []);
-      // Si la búsqueda tiene éxito, actualizamos también populares para que se vea el cambio
-      if (data && data.length > 0) {
-        setPopulares(prevPopulares => {
-          const filtrados = prevPopulares.filter(p => p.simbolo !== simboloAAnalizar);
-          return [{
-            simbolo: simboloAAnalizar,
-            estrategias: "Búsqueda manual",
-            menciones: data.length,
-            ...data[0]
-          }, ...filtrados].slice(0, 5);
-        });
-      }
     } catch (error) {
       console.error('Error analizando símbolo:', error);
     } finally {
@@ -298,7 +286,7 @@ export const Analitica = () => {
               <div className="h-[220px] w-full mt-4">
                 <ChartContainer
                   config={{
-                    precio: {
+                    precio_promedio: {
                       label: "Precio Promedio",
                       color: "#D4AF37",
                     },
@@ -336,12 +324,17 @@ export const Analitica = () => {
                       tickFormatter={(val) => `$${val.toFixed(0)}`}
                     />
                     <ChartTooltip
-                      cursor={{ stroke: "rgba(255,255,255,0.1)" }}
+                      cursor={{ stroke: "rgba(212,175,55,0.2)", strokeWidth: 2 }}
                       content={
                         <ChartTooltipContent
-                          labelFormatter={(val) => new Date(val as string).toLocaleDateString("es-ES", { weekday: "short", month: "short", day: "numeric" })}
-                          formatter={(val) => [`$${Number(val).toFixed(2)}`, "Precio Promedio"]}
-                          className="bg-[#111] border border-white/10 text-white"
+                          labelFormatter={(val) => new Date(val as string).toLocaleDateString("es-ES", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                          formatter={(val, name) => [
+                            <span key="val" className="font-bold ml-2 text-white">
+                              ${Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>,
+                            <span key="name" className="text-zinc-500">{name}</span>
+                          ]}
+                          className="bg-[#0c0c0c]/90 backdrop-blur-md border-white/10 text-white rounded-xl shadow-2xl p-4"
                         />
                       }
                     />
@@ -367,139 +360,182 @@ export const Analitica = () => {
 
       {/* Análisis por Símbolo / Populares */}
       {rendimientoActivo.length > 0 && simboloBusqueda ? (
-        <div className="p-6 rounded-2xl bg-white/[0.02] border border-[#D4AF37]/20 space-y-6 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-1 bg-[#D4AF37] h-full" />
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-bold text-white text-lg">Análisis Detallado: {simboloBusqueda}</h3>
-              <p className="text-xs text-zinc-500 mt-0.5">Histórico de rendimiento de los últimos 100 días</p>
-            </div>
-            <button 
-              onClick={() => setRendimientoActivo([])} 
-              className="text-xs text-zinc-500 hover:text-white transition-colors"
-            >
-              Cerrar vista
-            </button>
-          </div>
-
-          {/* Micro-métricas del activo */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
-            <div className="p-3 md:p-4 rounded-xl bg-white/5 border border-white/5">
-              <span className="text-[9px] md:text-[10px] text-zinc-500 uppercase tracking-widest font-bold block truncate">Último Precio</span>
-              <p className="text-lg md:text-xl font-bold tabular-nums mt-1 text-white">
-                ${parseFloat(rendimientoActivo[0]?.precio_cierre || 0).toFixed(2)}
-              </p>
-            </div>
-            <div className="p-3 md:p-4 rounded-xl bg-white/5 border border-white/5">
-              <span className="text-[9px] md:text-[10px] text-zinc-500 uppercase tracking-widest font-bold block truncate">Vol. (100d)</span>
-              <p className="text-lg md:text-xl font-bold text-white tabular-nums mt-1">
-                {(rendimientoActivo.reduce((acc, r) => acc + parseFloat(r.volumen || 0), 0) / rendimientoActivo.length / 1000000).toFixed(2)}M
-              </p>
-            </div>
-            <div className="p-3 md:p-4 rounded-xl bg-white/5 border border-white/5 col-span-2 md:col-span-1">
-              <span className="text-[9px] md:text-[10px] text-zinc-500 uppercase tracking-widest font-bold block truncate">Volatilidad Media</span>
-              <p className="text-lg md:text-xl font-bold text-white tabular-nums mt-1">
-                {(rendimientoActivo.reduce((acc, r) => acc + parseFloat(r.volatilidad || 0), 0) / rendimientoActivo.length).toFixed(2)}%
-              </p>
-            </div>
-          </div>
-
-          {/* Gráfico del activo */}
-          <div className="h-[250px] w-full">
-            <ChartContainer
-              config={{ precio_cierre: { label: "Precio ($)", color: "#D4AF37" } }}
-              className="h-full w-full [&_.recharts-cartesian-axis-tick_text]:fill-zinc-500"
-            >
-              <AreaChart
-                data={[...rendimientoActivo].reverse()}
-                margin={{ top: 10, right: 0, left: -20, bottom: 0 }}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative group"
+        >
+          {/* Decorative Glow */}
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-[#D4AF37]/20 via-transparent to-[#D4AF37]/10 rounded-3xl blur opacity-30 group-hover:opacity-50 transition duration-1000"></div>
+          
+          <div className="relative p-5 sm:p-8 rounded-3xl bg-[#080808] border border-white/10 backdrop-blur-xl overflow-hidden shadow-2xl">
+            {/* Background Texture/Pattern */}
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
+                 style={{ backgroundImage: 'radial-gradient(#D4AF37 0.5px, transparent 0.5px)', backgroundSize: '24px 24px' }}></div>
+            
+            <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 sm:mb-10">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="h-6 sm:h-8 w-1 bg-[#D4AF37] rounded-full shadow-[0_0_15px_rgba(212,175,55,0.5)]" />
+                  <h3 className="font-bold text-white text-xl sm:text-2xl tracking-tight leading-tight">
+                    Análisis <span className="hidden xs:inline">Detallado</span>: <span className="text-[#D4AF37]">{simboloBusqueda}</span>
+                  </h3>
+                </div>
+                <p className="text-[10px] text-zinc-500 ml-3 sm:ml-4 font-medium uppercase tracking-[0.1em] opacity-80">Intelligence Report • 100 Días</p>
+              </div>
+              <button 
+                onClick={() => setRendimientoActivo([])} 
+                className="self-start sm:self-center px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-[9px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white hover:bg-white/10 transition-all active:scale-95"
               >
-                <defs>
-                  <linearGradient id="colorPrecioActivo" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#D4AF37" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                <XAxis
-                  dataKey="fecha"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={10}
-                  minTickGap={30}
-                  tick={{ fill: "#71717a", fontSize: 10 }}
-                  tickFormatter={(val) => {
-                    const date = new Date(val);
-                    return date.toLocaleDateString("es-ES", { month: "short", day: "numeric" });
-                  }}
-                />
-                <YAxis
-                  domain={['auto', 'auto']}
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={10}
-                  tick={{ fill: "#71717a", fontSize: 10 }}
-                  tickFormatter={(val) => `$${val.toFixed(0)}`}
-                />
-                <ChartTooltip
-                  cursor={{ stroke: "rgba(255,255,255,0.1)" }}
-                  content={
-                    <ChartTooltipContent
-                      labelFormatter={(val) => new Date(val as string).toLocaleDateString("es-ES", { weekday: "short", month: "short", day: "numeric" })}
-                      formatter={(val) => [`$${Number(val).toFixed(2)}`, "Precio de Cierre"]}
-                      className="bg-[#111] border border-white/10 text-white"
-                    />
-                  }
-                />
-                <Area
-                  type="monotone"
-                  dataKey="precio_cierre"
-                  stroke="#D4AF37"
-                  strokeWidth={2}
-                  fill="url(#colorPrecioActivo)"
-                />
-              </AreaChart>
-            </ChartContainer>
+                Cerrar Terminal
+              </button>
+            </div>
+
+            {/* Micro-métricas del activo - Premium Grid Responsivo */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-6 mb-8 sm:mb-10">
+              {[
+                { 
+                  label: "Último Precio", 
+                  value: `$${parseFloat(rendimientoActivo[0]?.precio_cierre || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
+                  className: "col-span-1"
+                },
+                { 
+                  label: "Vol. (100d)", 
+                  value: `${(rendimientoActivo.reduce((acc, r) => acc + parseFloat(r.volumen || 0), 0) / rendimientoActivo.length / 1000000).toFixed(2)}M`,
+                  className: "col-span-1"
+                },
+                { 
+                  label: "Volatilidad Media", 
+                  value: `${(rendimientoActivo.reduce((acc, r) => acc + parseFloat(r.volatilidad || 0), 0) / rendimientoActivo.length).toFixed(2)}%`,
+                  className: "col-span-2 sm:col-span-1"
+                }
+              ].map((item, idx) => (
+                <div key={idx} className={cn(
+                  "relative p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-white/[0.03] to-transparent border border-white/5 group/card overflow-hidden",
+                  item.className
+                )}>
+                  <div className="absolute top-0 right-0 p-2 sm:p-3 opacity-5 group-hover/card:opacity-10 transition-opacity">
+                    <TrendingUp className="size-8 sm:size-12 text-white" />
+                  </div>
+                  <span className="text-[8px] sm:text-[10px] text-zinc-500 uppercase tracking-[0.15em] sm:tracking-[0.2em] font-black block mb-1 sm:mb-2">{item.label}</span>
+                  <div className="flex items-baseline gap-1 sm:gap-2">
+                    <p className="text-xl sm:text-3xl font-bold text-white tabular-nums tracking-tighter">
+                      {item.value}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Gráfico del activo - Estética Refinada */}
+            <div className="h-[320px] w-full mt-4 group/chart">
+              <ChartContainer
+                config={{ precio_cierre: { label: "Market Price", color: "#D4AF37" } }}
+                className="h-full w-full"
+              >
+                <AreaChart
+                  data={[...rendimientoActivo].reverse()}
+                  margin={{ top: 20, right: 10, left: -20, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="colorPrecioActivo" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#D4AF37" stopOpacity={0.5} />
+                      <stop offset="40%" stopColor="#D4AF37" stopOpacity={0.1} />
+                      <stop offset="100%" stopColor="#D4AF37" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid 
+                    strokeDasharray="0" 
+                    stroke="rgba(255,255,255,0.03)" 
+                    vertical={false} 
+                  />
+                  <XAxis
+                    dataKey="fecha"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={20}
+                    minTickGap={60}
+                    tick={{ fill: "#52525b", fontSize: 10, fontWeight: 600 }}
+                    tickFormatter={(val) => {
+                      const date = new Date(val);
+                      return date.toLocaleDateString("es-ES", { month: "short", day: "numeric" }).toUpperCase();
+                    }}
+                  />
+                  <YAxis
+                    domain={['auto', 'auto']}
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={20}
+                    tick={{ fill: "#52525b", fontSize: 10, fontWeight: 600 }}
+                    tickFormatter={(val) => `$${val.toLocaleString()}`}
+                  />
+                  <ChartTooltip
+                    cursor={{ stroke: "rgba(212,175,55,0.2)", strokeWidth: 2 }}
+                    content={
+                      <ChartTooltipContent
+                        labelFormatter={(val) => new Date(val as string).toLocaleDateString("es-ES", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                        formatter={(val, name) => [
+                          <span key="val" className="font-bold ml-2 text-white">
+                            ${Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>,
+                          <span key="name" className="text-zinc-500">{name}</span>
+                        ]}
+                        className="bg-[#0c0c0c]/90 backdrop-blur-md border-white/10 text-white rounded-xl shadow-2xl p-4"
+                      />
+                    }
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="precio_cierre"
+                    stroke="#D4AF37"
+                    strokeWidth={3}
+                    strokeLinecap="round"
+                    fill="url(#colorPrecioActivo)"
+                    animationDuration={2000}
+                  />
+                </AreaChart>
+              </ChartContainer>
+            </div>
           </div>
-        </div>
+        </motion.div>
       ) : (
-        <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
+        <div className="p-4 sm:p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-bold text-white">Activos Populares en Plataforma</h3>
+              <h3 className="font-bold text-white text-base sm:text-lg">Activos Populares en Plataforma</h3>
               <p className="text-xs text-zinc-500 mt-0.5">Top 10 activos con más menciones en estrategias</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-4 px-4 py-2 text-[10px] uppercase font-bold tracking-widest text-zinc-600 border-b border-white/5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 px-2 sm:px-4 py-2 text-[10px] uppercase font-bold tracking-widest text-zinc-600 border-b border-white/5">
             <span>Activo</span>
-            <span>Estrategias Asociadas</span>
+            <span className="hidden sm:block">Estrategias Asociadas</span>
             <span className="text-right">Menciones</span>
-            <span className="text-right">Relevancia</span>
+            <span className="hidden sm:block text-right">Relevancia</span>
           </div>
 
           <div className="divide-y divide-white/5">
             {loading ? (
                [...Array(3)].map((_, i) => (
-                <div key={i} className="grid grid-cols-4 items-center p-4">
+                <div key={i} className="grid grid-cols-2 sm:grid-cols-4 items-center p-4">
                   <Skeleton className="h-3 w-12" />
-                  <Skeleton className="h-3 w-40" />
+                  <Skeleton className="hidden sm:block h-3 w-40" />
                   <Skeleton className="h-3 w-14 ml-auto" />
-                  <Skeleton className="h-2 w-full ml-4" />
+                  <Skeleton className="hidden sm:block h-2 w-full ml-4" />
                 </div>
               ))
             ) : populares.length > 0 ? (
               populares.map((p, i) => (
-                <div key={p.simbolo} className="grid grid-cols-4 items-center p-4 hover:bg-white/[0.01] transition-colors group/row">
+                <div key={p.simbolo} className="grid grid-cols-2 sm:grid-cols-4 items-center p-3 sm:p-4 hover:bg-white/[0.01] transition-colors group/row">
                   <div className="flex items-center gap-2">
                     <div className="size-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-bold text-white group-hover/row:border-[#D4AF37]/30 transition-all">
                       {p.simbolo[0]}
                     </div>
                     <span className="text-sm font-bold text-white">{p.simbolo}</span>
                   </div>
-                  <span className="text-xs text-zinc-500 italic truncate pr-4">{p.estrategias}</span>
+                  <span className="hidden sm:block text-xs text-zinc-500 italic truncate pr-4">{p.estrategias}</span>
                   <span className="text-sm font-bold text-zinc-300 text-right tabular-nums">{p.menciones}</span>
-                  <div className="pl-8">
+                  <div className="hidden sm:block pl-8">
                     <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-gradient-to-r from-[#D4AF37]/20 to-[#D4AF37]/60 rounded-full" 

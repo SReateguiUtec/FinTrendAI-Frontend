@@ -151,26 +151,27 @@ export function ChartHistorial({
                 width={65}
               />
               <ChartTooltip
-                cursor={{ stroke: "rgba(255,255,255,0.1)" }}
+                cursor={{ stroke: "rgba(212,175,55,0.2)", strokeWidth: 2 }}
                 content={
                   <ChartTooltipContent
                     labelFormatter={(value) => {
                       return new Date(value as string).toLocaleDateString(
                         "es-ES",
                         {
-                          weekday: "short",
-                          month: "short",
+                          weekday: "long",
                           day: "numeric",
+                          month: "long",
                           year: "numeric",
                         }
                       )
                     }}
-                    formatter={(value) => [
-                      formatPrice(Number(value)),
-                      "Cierre",
+                    className="bg-[#0c0c0c]/90 backdrop-blur-md border-white/10 text-white rounded-xl shadow-2xl p-4"
+                    formatter={(val, name) => [
+                      <span key="val" className="font-bold ml-2 text-white">
+                        ${Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>,
+                      <span key="name" className="text-zinc-500">{name}</span>
                     ]}
-                    indicator="dot"
-                    className="bg-[#111] border border-white/10"
                   />
                 }
               />
