@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { BarChart3, TrendingUp, Activity, Search, ChevronDown, PieChart, Info } from 'lucide-react';
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { cn } from '@/lib/utils';
 import * as analiticaService from '@/services/analitica';
 
@@ -59,12 +61,15 @@ export const Analitica = () => {
       setRendimientoActivo(data || []);
       // Si la búsqueda tiene éxito, actualizamos también populares para que se vea el cambio
       if (data && data.length > 0) {
-        setPopulares([{
-          simbolo: simboloBusqueda,
-          estrategias: "Búsqueda manual",
-          menciones: data.length,
-          ...data[0]
-        }, ...populares.slice(0, 4)]);
+        setPopulares(prevPopulares => {
+          const filtrados = prevPopulares.filter(p => p.simbolo !== simboloBusqueda);
+          return [{
+            simbolo: simboloBusqueda,
+            estrategias: "Búsqueda manual",
+            menciones: data.length,
+            ...data[0]
+          }, ...filtrados].slice(0, 5);
+        });
       }
     } catch (error) {
       console.error('Error analizando símbolo:', error);
@@ -218,21 +223,83 @@ export const Analitica = () => {
             <p className="text-xs text-zinc-500 mt-0.5">Datos de MS5 · /api/analitica/tendencias</p>
           </div>
 
-          {/* SVG placeholder del gráfico */}
-          <div className="min-h-[220px] flex flex-col items-center justify-center gap-3 border border-dashed border-white/10 rounded-xl">
-            <Activity className="size-8 text-zinc-800" />
-            <p className="text-xs text-zinc-600 text-center leading-relaxed">
-              La línea de tendencia se<br />renderizará con datos reales
-            </p>
-            {/* Eje fake */}
-            <div className="w-full px-4 opacity-20">
-              <div className="h-px bg-white/20 w-full" />
-              <div className="flex justify-between mt-1">
-                {['Ene', 'Feb', 'Mar', 'Abr', 'May'].map((m) => (
-                  <span key={m} className="text-[8px] text-zinc-600">{m}</span>
-                ))}
+          <div className="min-h-[220px] flex flex-col justify-center">
+            {loading ? (
+              <div className="flex flex-col gap-4 animate-pulse">
+                <div className="h-40 bg-white/5 rounded-xl w-full" />
+                <div className="flex justify-between px-2">
+                  <div className="h-3 w-10 bg-white/5 rounded" />
+                  <div className="h-3 w-10 bg-white/5 rounded" />
+                  <div className="h-3 w-10 bg-white/5 rounded" />
+                </div>
               </div>
-            </div>
+            ) : tendencias.length > 0 ? (
+              <div className="h-[220px] w-full mt-4">
+                <ChartContainer
+                  config={{
+                    precio: {
+                      label: "Precio Promedio",
+                      color: "#D4AF37",
+                    },
+                  }}
+                  className="h-full w-full [&_.recharts-cartesian-axis-tick_text]:fill-zinc-500"
+                >
+                  <AreaChart
+                    data={[...tendencias].reverse()}
+                    margin={{ top: 5, right: 0, left: -20, bottom: 0 }}
+                  >
+                    <defs>
+                      <linearGradient id="colorTendencia" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#D4AF37" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <XAxis
+                      dataKey="dia"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={10}
+                      tick={{ fill: "#71717a", fontSize: 10 }}
+                      tickFormatter={(val) => {
+                        const date = new Date(val);
+                        return date.toLocaleDateString("es-ES", { month: "short", day: "numeric" });
+                      }}
+                    />
+                    <YAxis
+                      domain={['auto', 'auto']}
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={10}
+                      tick={{ fill: "#71717a", fontSize: 10 }}
+                      tickFormatter={(val) => `$${val.toFixed(0)}`}
+                    />
+                    <ChartTooltip
+                      cursor={{ stroke: "rgba(255,255,255,0.1)" }}
+                      content={
+                        <ChartTooltipContent
+                          labelFormatter={(val) => new Date(val as string).toLocaleDateString("es-ES", { weekday: "short", month: "short", day: "numeric" })}
+                          formatter={(val) => [`$${Number(val).toFixed(2)}`, "Precio Promedio"]}
+                          className="bg-[#111] border border-white/10 text-white"
+                        />
+                      }
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="precio_promedio"
+                      stroke="#D4AF37"
+                      strokeWidth={2}
+                      fill="url(#colorTendencia)"
+                    />
+                  </AreaChart>
+                </ChartContainer>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-3 py-10 border border-dashed border-white/10 rounded-xl">
+                <Activity className="size-8 text-zinc-800" />
+                <p className="text-xs text-zinc-600 text-center">No hay datos de tendencias</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
