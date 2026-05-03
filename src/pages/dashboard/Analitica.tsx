@@ -49,6 +49,29 @@ export const Analitica = () => {
   const [tendencias, setTendencias] = useState<any[]>([]);
   const [populares, setPopulares] = useState<any[]>([]);
   const [impactoNoticias, setImpactoNoticias] = useState<any[]>([]);
+  const [rendimientoActivo, setRendimientoActivo] = useState<any[]>([]);
+
+  const handleAnalizar = async () => {
+    if (!simboloBusqueda) return;
+    setLoading(true);
+    try {
+      const data = await analiticaService.getRendimientoSimbolo(simboloBusqueda);
+      setRendimientoActivo(data || []);
+      // Si la búsqueda tiene éxito, actualizamos también populares para que se vea el cambio
+      if (data && data.length > 0) {
+        setPopulares([{
+          simbolo: simboloBusqueda,
+          estrategias: "Búsqueda manual",
+          menciones: data.length,
+          ...data[0]
+        }, ...populares.slice(0, 4)]);
+      }
+    } catch (error) {
+      console.error('Error analizando símbolo:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchAnalitica = async () => {
     setLoading(true);
@@ -102,10 +125,14 @@ export const Analitica = () => {
               placeholder="Símbolo (ej. AAPL)"
               value={simboloBusqueda}
               onChange={(e) => setSimboloBusqueda(e.target.value.toUpperCase())}
+              onKeyDown={(e) => e.key === 'Enter' && handleAnalizar()}
               className="bg-white/5 border border-white/10 rounded-xl py-2 pl-9 pr-4 text-sm focus:outline-none focus:border-[#D4AF37]/50 placeholder:text-zinc-600 transition-all w-44"
             />
           </div>
-          <button className="px-4 py-2 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-sm font-bold hover:bg-[#D4AF37]/20 transition-all">
+          <button 
+            onClick={handleAnalizar}
+            className="px-4 py-2 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-sm font-bold hover:bg-[#D4AF37]/20 transition-all"
+          >
             Analizar
           </button>
         </motion.div>
