@@ -5,6 +5,7 @@
  */
 
 import { ms5 } from './api';
+export { ms5 };
 
 export interface RendimientoSector {
   sector: string;

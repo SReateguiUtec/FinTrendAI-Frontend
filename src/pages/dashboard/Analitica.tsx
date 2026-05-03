@@ -53,15 +53,15 @@ export const Analitica = () => {
   const fetchAnalitica = async () => {
     setLoading(true);
     try {
-      const [secData, trendData, popData] = await Promise.all([
+      const [secData, trendData, popResponse] = await Promise.all([
         analiticaService.getRendimientoSector(),
         analiticaService.getTendencias(),
-        fetch('/api/analitica/popularidad-activos').then(res => res.json())
+        analiticaService.ms5.get('/api/analitica/popularidad-activos')
       ]);
       
       setSectores(secData || []);
       setTendencias(trendData || []);
-      setPopulares(popData || []);
+      setPopulares(popResponse.data || []);
     } catch (error) {
       console.error('Error fetching analytics:', error);
     } finally {
