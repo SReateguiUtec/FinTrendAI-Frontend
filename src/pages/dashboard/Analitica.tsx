@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart3, TrendingUp, Activity, Search, ChevronDown, PieChart, Info } from 'lucide-react';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { cn } from '@/lib/utils';
 import * as analiticaService from '@/services/analitica';
+import { getSimbolos, Simbolo } from '@/services/precios';
 
 const Skeleton = ({ className }: { className?: string }) => (
   <div className={cn('animate-pulse rounded-xl bg-white/5', className)} />
@@ -47,6 +48,11 @@ export const Analitica = () => {
   const [loading, setLoading] = useState(true);
   const [loadingSymbol, setLoadingSymbol] = useState(false);
   
+  // Autocomplete states
+  const [simbolosList, setSimbolosList] = useState<Simbolo[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+
   // Data states
   const [sectores, setSectores] = useState<any[]>([]);
   const [tendencias, setTendencias] = useState<any[]>([]);
@@ -54,18 +60,30 @@ export const Analitica = () => {
   const [impactoNoticias, setImpactoNoticias] = useState<any[]>([]);
   const [rendimientoActivo, setRendimientoActivo] = useState<any[]>([]);
 
-  const handleAnalizar = async () => {
-    if (!simboloBusqueda) return;
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleAnalizar = async (simboloAAnalizar = simboloBusqueda) => {
+    if (!simboloAAnalizar) return;
+    setSimboloBusqueda(simboloAAnalizar);
+    setShowSuggestions(false);
     setLoadingSymbol(true);
     try {
-      const data = await analiticaService.getRendimientoSimbolo(simboloBusqueda);
+      const data = await analiticaService.getRendimientoSimbolo(simboloAAnalizar);
       setRendimientoActivo(data || []);
       // Si la búsqueda tiene éxito, actualizamos también populares para que se vea el cambio
       if (data && data.length > 0) {
         setPopulares(prevPopulares => {
-          const filtrados = prevPopulares.filter(p => p.simbolo !== simboloBusqueda);
+          const filtrados = prevPopulares.filter(p => p.simbolo !== simboloAAnalizar);
           return [{
-            simbolo: simboloBusqueda,
+            simbolo: simboloAAnalizar,
             estrategias: "Búsqueda manual",
             menciones: data.length,
             ...data[0]
@@ -82,15 +100,17 @@ export const Analitica = () => {
   const fetchAnalitica = async () => {
     setLoading(true);
     try {
-      const [secData, trendData, popResponse] = await Promise.all([
+      const [secData, trendData, popResponse, simbolosData] = await Promise.all([
         analiticaService.getRendimientoSector(),
         analiticaService.getTendencias(),
-        analiticaService.ms5.get('/api/analitica/popularidad-activos')
+        analiticaService.ms5.get('/api/analitica/popularidad-activos'),
+        getSimbolos().catch(() => []) // Fetch symbols
       ]);
       
       setSectores(secData || []);
       setTendencias(trendData || []);
       setPopulares(popResponse.data || []);
+      setSimbolosList(simbolosData || []);
     } catch (error) {
       console.error('Error fetching analytics:', error);
     } finally {
@@ -118,25 +138,64 @@ export const Analitica = () => {
             <h1 className="text-3xl font-bold tracking-tight">Analítica</h1>
           </div>
           <p className="text-zinc-400 text-sm">
-            Métricas de mercado · <span className="text-zinc-600">MS5 vía AWS Athena</span>
+            Métricas e insights del mercado
           </p>
         </motion.div>
 
-        {/* Buscador de símbolo */}
+        {/* Buscador de símbolo con Autocompletado */}
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex gap-2">
-          <div className="relative">
+          <div className="relative" ref={searchRef}>
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-zinc-500" />
             <input
               type="text"
               placeholder="Símbolo (ej. AAPL)"
               value={simboloBusqueda}
-              onChange={(e) => setSimboloBusqueda(e.target.value.toUpperCase())}
+              onChange={(e) => {
+                setSimboloBusqueda(e.target.value.toUpperCase());
+                setShowSuggestions(true);
+              }}
+              onFocus={() => setShowSuggestions(true)}
               onKeyDown={(e) => e.key === 'Enter' && handleAnalizar()}
               className="bg-white/5 border border-white/10 rounded-xl py-2 pl-9 pr-4 text-sm focus:outline-none focus:border-[#D4AF37]/50 placeholder:text-zinc-600 transition-all w-44"
             />
+            
+            {/* Popover de Recomendaciones */}
+            <AnimatePresence>
+              {showSuggestions && simboloBusqueda.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 5 }}
+                  className="absolute top-full mt-2 left-0 w-[240px] max-h-[250px] overflow-y-auto bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl z-50 py-2 custom-scrollbar"
+                >
+                  {simbolosList.filter(s => 
+                    s.simbolo.toUpperCase().includes(simboloBusqueda.toUpperCase()) || 
+                    s.nombre.toUpperCase().includes(simboloBusqueda.toUpperCase())
+                  ).slice(0, 8).map(s => (
+                    <button
+                      key={s.simbolo}
+                      onClick={() => handleAnalizar(s.simbolo)}
+                      className="w-full px-4 py-2 text-left hover:bg-white/5 transition-colors flex flex-col items-start gap-0.5 group"
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-sm font-bold text-white group-hover:text-[#D4AF37] transition-colors">{s.simbolo}</span>
+                        <span className="text-[9px] text-zinc-500 uppercase px-1.5 py-0.5 rounded bg-white/5">{s.sector || 'N/A'}</span>
+                      </div>
+                      <span className="text-[10px] text-zinc-400 truncate w-full">{s.nombre}</span>
+                    </button>
+                  ))}
+                  
+                  {simbolosList.filter(s => s.simbolo.toUpperCase().includes(simboloBusqueda.toUpperCase()) || s.nombre.toUpperCase().includes(simboloBusqueda.toUpperCase())).length === 0 && (
+                    <div className="px-4 py-3 text-center">
+                      <span className="text-xs text-zinc-500">No se encontraron símbolos</span>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
           <button 
-            onClick={handleAnalizar}
+            onClick={() => handleAnalizar()}
             disabled={loadingSymbol}
             className="flex items-center justify-center min-w-[80px] px-4 py-2 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-sm font-bold hover:bg-[#D4AF37]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -176,7 +235,7 @@ export const Analitica = () => {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-bold text-white">Rendimiento por Sector</h3>
-              <p className="text-xs text-zinc-500 mt-0.5">Datos de MS5 · /api/analitica/rendimiento-detallado</p>
+              <p className="text-xs text-zinc-500 mt-0.5">Promedio histórico ponderado</p>
             </div>
           </div>
 
@@ -222,7 +281,7 @@ export const Analitica = () => {
         <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
           <div>
             <h3 className="font-bold text-white">Tendencias del Mercado</h3>
-            <p className="text-xs text-zinc-500 mt-0.5">Datos de MS5 · /api/analitica/tendencias</p>
+            <p className="text-xs text-zinc-500 mt-0.5">Evolución del precio promedio</p>
           </div>
 
           <div className="min-h-[220px] flex flex-col justify-center">
@@ -313,7 +372,7 @@ export const Analitica = () => {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-bold text-white text-lg">Análisis Detallado: {simboloBusqueda}</h3>
-              <p className="text-xs text-zinc-500 mt-0.5">Histórico de rendimiento de los últimos 100 días · MS5</p>
+              <p className="text-xs text-zinc-500 mt-0.5">Histórico de rendimiento de los últimos 100 días</p>
             </div>
             <button 
               onClick={() => setRendimientoActivo([])} 
@@ -408,7 +467,7 @@ export const Analitica = () => {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-bold text-white">Activos Populares en Plataforma</h3>
-              <p className="text-xs text-zinc-500 mt-0.5">Top 10 activos con más menciones en estrategias · MS5</p>
+              <p className="text-xs text-zinc-500 mt-0.5">Top 10 activos con más menciones en estrategias</p>
             </div>
           </div>
 
