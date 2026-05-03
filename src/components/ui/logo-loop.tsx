@@ -159,13 +159,13 @@ const useAnimationLoop = (
 
         const keyframes = isVertical
             ? [
-                  { transform: 'translate3d(0, 0, 0)' },
-                  { transform: `translate3d(0, ${direction * seqSize}px, 0)` }
-              ]
+                { transform: 'translate3d(0, 0, 0)' },
+                { transform: `translate3d(0, ${direction * seqSize}px, 0)` }
+            ]
             : [
-                  { transform: 'translate3d(0, 0, 0)' },
-                  { transform: `translate3d(${direction * seqSize}px, 0, 0)` }
-              ];
+                { transform: 'translate3d(0, 0, 0)' },
+                { transform: `translate3d(${direction * seqSize}px, 0, 0)` }
+            ];
 
         let startProgress = 0;
         if (animationRef.current) {
