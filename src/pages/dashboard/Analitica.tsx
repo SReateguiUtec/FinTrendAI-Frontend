@@ -304,61 +304,162 @@ export const Analitica = () => {
         </div>
       </div>
 
-      {/* Tabla rendimiento por símbolo */}
-      <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-bold text-white">Rendimiento por Símbolo</h3>
-            <p className="text-xs text-zinc-500 mt-0.5">Datos de MS5 · /api/analitica/rendimiento-simbolo?simbolo=…</p>
+      {/* Análisis por Símbolo / Populares */}
+      {rendimientoActivo.length > 0 && simboloBusqueda ? (
+        <div className="p-6 rounded-2xl bg-white/[0.02] border border-[#D4AF37]/20 space-y-6 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-1 bg-[#D4AF37] h-full" />
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-white text-lg">Análisis Detallado: {simboloBusqueda}</h3>
+              <p className="text-xs text-zinc-500 mt-0.5">Histórico de rendimiento de los últimos 100 días · MS5</p>
+            </div>
+            <button 
+              onClick={() => setRendimientoActivo([])} 
+              className="text-xs text-zinc-500 hover:text-white transition-colors"
+            >
+              Cerrar vista
+            </button>
+          </div>
+
+          {/* Micro-métricas del activo */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="p-4 rounded-xl bg-white/5 border border-white/5">
+              <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Último Rend.</span>
+              <p className={cn(
+                "text-xl font-bold tabular-nums mt-1",
+                parseFloat(rendimientoActivo[0]?.rendimiento || 0) >= 0 ? "text-[#D4AF37]" : "text-red-400"
+              )}>
+                {parseFloat(rendimientoActivo[0]?.rendimiento || 0).toFixed(2)}%
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-white/5 border border-white/5">
+              <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Máximo (100d)</span>
+              <p className="text-xl font-bold text-white tabular-nums mt-1">
+                {Math.max(...rendimientoActivo.map(r => parseFloat(r.rendimiento))).toFixed(2)}%
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-white/5 border border-white/5">
+              <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Mínimo (100d)</span>
+              <p className="text-xl font-bold text-white tabular-nums mt-1">
+                {Math.min(...rendimientoActivo.map(r => parseFloat(r.rendimiento))).toFixed(2)}%
+              </p>
+            </div>
+          </div>
+
+          {/* Gráfico del activo */}
+          <div className="h-[250px] w-full">
+            <ChartContainer
+              config={{ rendimiento: { label: "Rendimiento (%)", color: "#D4AF37" } }}
+              className="h-full w-full [&_.recharts-cartesian-axis-tick_text]:fill-zinc-500"
+            >
+              <AreaChart
+                data={[...rendimientoActivo].reverse()}
+                margin={{ top: 10, right: 0, left: -20, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="colorRendimientoActivo" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#D4AF37" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <XAxis
+                  dataKey="fecha"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={10}
+                  minTickGap={30}
+                  tick={{ fill: "#71717a", fontSize: 10 }}
+                  tickFormatter={(val) => {
+                    const date = new Date(val);
+                    return date.toLocaleDateString("es-ES", { month: "short", day: "numeric" });
+                  }}
+                />
+                <YAxis
+                  domain={['auto', 'auto']}
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={10}
+                  tick={{ fill: "#71717a", fontSize: 10 }}
+                  tickFormatter={(val) => `${val.toFixed(1)}%`}
+                />
+                <ChartTooltip
+                  cursor={{ stroke: "rgba(255,255,255,0.1)" }}
+                  content={
+                    <ChartTooltipContent
+                      labelFormatter={(val) => new Date(val as string).toLocaleDateString("es-ES", { weekday: "short", month: "short", day: "numeric" })}
+                      formatter={(val) => [`${Number(val).toFixed(2)}%`, "Rendimiento Diario"]}
+                      className="bg-[#111] border border-white/10 text-white"
+                    />
+                  }
+                />
+                <Area
+                  type="monotone"
+                  dataKey="rendimiento"
+                  stroke="#D4AF37"
+                  strokeWidth={2}
+                  fill="url(#colorRendimientoActivo)"
+                />
+              </AreaChart>
+            </ChartContainer>
           </div>
         </div>
-
-        <div className="grid grid-cols-4 px-4 py-2 text-[10px] uppercase font-bold tracking-widest text-zinc-600 border-b border-white/5">
-          <span>Activo</span>
-          <span>Estrategias Asociadas</span>
-          <span className="text-right">Menciones</span>
-          <span className="text-right">Relevancia</span>
-        </div>
-
-        <div className="divide-y divide-white/5">
-          {loading ? (
-             [...Array(3)].map((_, i) => (
-              <div key={i} className="grid grid-cols-4 items-center p-4">
-                <Skeleton className="h-3 w-12" />
-                <Skeleton className="h-3 w-40" />
-                <Skeleton className="h-3 w-14 ml-auto" />
-                <Skeleton className="h-2 w-full ml-4" />
-              </div>
-            ))
-          ) : populares.length > 0 ? (
-            populares.map((p, i) => (
-              <div key={p.simbolo} className="grid grid-cols-4 items-center p-4 hover:bg-white/[0.01] transition-colors group/row">
-                <div className="flex items-center gap-2">
-                  <div className="size-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-bold text-white group-hover/row:border-[#D4AF37]/30 transition-all">
-                    {p.simbolo[0]}
-                  </div>
-                  <span className="text-sm font-bold text-white">{p.simbolo}</span>
-                </div>
-                <span className="text-xs text-zinc-500 italic truncate pr-4">{p.estrategias}</span>
-                <span className="text-sm font-bold text-zinc-300 text-right tabular-nums">{p.menciones}</span>
-                <div className="pl-8">
-                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-to-r from-[#D4AF37]/20 to-[#D4AF37]/60 rounded-full" 
-                      style={{ width: `${Math.max(100 - (i * 15), 10)}%` }} 
-                    />
-                  </div>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="flex flex-col items-center justify-center gap-3 py-10">
-              <Info className="size-7 text-zinc-800" />
-              <p className="text-xs text-zinc-600 text-center">No hay datos de popularidad disponibles</p>
+      ) : (
+        <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-white">Activos Populares en Plataforma</h3>
+              <p className="text-xs text-zinc-500 mt-0.5">Top 10 activos con más menciones en estrategias · MS5</p>
             </div>
-          )}
+          </div>
+
+          <div className="grid grid-cols-4 px-4 py-2 text-[10px] uppercase font-bold tracking-widest text-zinc-600 border-b border-white/5">
+            <span>Activo</span>
+            <span>Estrategias Asociadas</span>
+            <span className="text-right">Menciones</span>
+            <span className="text-right">Relevancia</span>
+          </div>
+
+          <div className="divide-y divide-white/5">
+            {loading ? (
+               [...Array(3)].map((_, i) => (
+                <div key={i} className="grid grid-cols-4 items-center p-4">
+                  <Skeleton className="h-3 w-12" />
+                  <Skeleton className="h-3 w-40" />
+                  <Skeleton className="h-3 w-14 ml-auto" />
+                  <Skeleton className="h-2 w-full ml-4" />
+                </div>
+              ))
+            ) : populares.length > 0 ? (
+              populares.map((p, i) => (
+                <div key={p.simbolo} className="grid grid-cols-4 items-center p-4 hover:bg-white/[0.01] transition-colors group/row">
+                  <div className="flex items-center gap-2">
+                    <div className="size-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-bold text-white group-hover/row:border-[#D4AF37]/30 transition-all">
+                      {p.simbolo[0]}
+                    </div>
+                    <span className="text-sm font-bold text-white">{p.simbolo}</span>
+                  </div>
+                  <span className="text-xs text-zinc-500 italic truncate pr-4">{p.estrategias}</span>
+                  <span className="text-sm font-bold text-zinc-300 text-right tabular-nums">{p.menciones}</span>
+                  <div className="pl-8">
+                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-[#D4AF37]/20 to-[#D4AF37]/60 rounded-full" 
+                        style={{ width: `${Math.max(100 - (i * 15), 10)}%` }} 
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-3 py-10">
+                <Info className="size-7 text-zinc-800" />
+                <p className="text-xs text-zinc-600 text-center">No hay datos de popularidad disponibles</p>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
