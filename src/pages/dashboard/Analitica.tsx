@@ -45,6 +45,7 @@ const MetricCard = ({
 export const Analitica = () => {
   const [simboloBusqueda, setSimboloBusqueda] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadingSymbol, setLoadingSymbol] = useState(false);
   
   // Data states
   const [sectores, setSectores] = useState<any[]>([]);
@@ -55,7 +56,7 @@ export const Analitica = () => {
 
   const handleAnalizar = async () => {
     if (!simboloBusqueda) return;
-    setLoading(true);
+    setLoadingSymbol(true);
     try {
       const data = await analiticaService.getRendimientoSimbolo(simboloBusqueda);
       setRendimientoActivo(data || []);
@@ -74,7 +75,7 @@ export const Analitica = () => {
     } catch (error) {
       console.error('Error analizando símbolo:', error);
     } finally {
-      setLoading(false);
+      setLoadingSymbol(false);
     }
   };
 
@@ -136,9 +137,10 @@ export const Analitica = () => {
           </div>
           <button 
             onClick={handleAnalizar}
-            className="px-4 py-2 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-sm font-bold hover:bg-[#D4AF37]/20 transition-all"
+            disabled={loadingSymbol}
+            className="flex items-center justify-center min-w-[80px] px-4 py-2 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-sm font-bold hover:bg-[#D4AF37]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Analizar
+            {loadingSymbol ? <Activity className="size-4 animate-spin" /> : 'Analizar'}
           </button>
         </motion.div>
       </div>
@@ -322,22 +324,22 @@ export const Analitica = () => {
           </div>
 
           {/* Micro-métricas del activo */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="p-4 rounded-xl bg-white/5 border border-white/5">
-              <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Último Precio</span>
-              <p className="text-xl font-bold tabular-nums mt-1 text-white">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+            <div className="p-3 md:p-4 rounded-xl bg-white/5 border border-white/5">
+              <span className="text-[9px] md:text-[10px] text-zinc-500 uppercase tracking-widest font-bold block truncate">Último Precio</span>
+              <p className="text-lg md:text-xl font-bold tabular-nums mt-1 text-white">
                 ${parseFloat(rendimientoActivo[0]?.precio_cierre || 0).toFixed(2)}
               </p>
             </div>
-            <div className="p-4 rounded-xl bg-white/5 border border-white/5">
-              <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Volumen Medio (100d)</span>
-              <p className="text-xl font-bold text-white tabular-nums mt-1">
+            <div className="p-3 md:p-4 rounded-xl bg-white/5 border border-white/5">
+              <span className="text-[9px] md:text-[10px] text-zinc-500 uppercase tracking-widest font-bold block truncate">Vol. (100d)</span>
+              <p className="text-lg md:text-xl font-bold text-white tabular-nums mt-1">
                 {(rendimientoActivo.reduce((acc, r) => acc + parseFloat(r.volumen || 0), 0) / rendimientoActivo.length / 1000000).toFixed(2)}M
               </p>
             </div>
-            <div className="p-4 rounded-xl bg-white/5 border border-white/5">
-              <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Volatilidad Media</span>
-              <p className="text-xl font-bold text-white tabular-nums mt-1">
+            <div className="p-3 md:p-4 rounded-xl bg-white/5 border border-white/5 col-span-2 md:col-span-1">
+              <span className="text-[9px] md:text-[10px] text-zinc-500 uppercase tracking-widest font-bold block truncate">Volatilidad Media</span>
+              <p className="text-lg md:text-xl font-bold text-white tabular-nums mt-1">
                 {(rendimientoActivo.reduce((acc, r) => acc + parseFloat(r.volatilidad || 0), 0) / rendimientoActivo.length).toFixed(2)}%
               </p>
             </div>
