@@ -324,24 +324,21 @@ export const Analitica = () => {
           {/* Micro-métricas del activo */}
           <div className="grid grid-cols-3 gap-4">
             <div className="p-4 rounded-xl bg-white/5 border border-white/5">
-              <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Último Rend.</span>
-              <p className={cn(
-                "text-xl font-bold tabular-nums mt-1",
-                parseFloat(rendimientoActivo[0]?.rendimiento || 0) >= 0 ? "text-[#D4AF37]" : "text-red-400"
-              )}>
-                {parseFloat(rendimientoActivo[0]?.rendimiento || 0).toFixed(2)}%
+              <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Último Precio</span>
+              <p className="text-xl font-bold tabular-nums mt-1 text-white">
+                ${parseFloat(rendimientoActivo[0]?.precio_cierre || 0).toFixed(2)}
               </p>
             </div>
             <div className="p-4 rounded-xl bg-white/5 border border-white/5">
-              <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Máximo (100d)</span>
+              <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Volumen Medio (100d)</span>
               <p className="text-xl font-bold text-white tabular-nums mt-1">
-                {Math.max(...rendimientoActivo.map(r => parseFloat(r.rendimiento))).toFixed(2)}%
+                {(rendimientoActivo.reduce((acc, r) => acc + parseFloat(r.volumen || 0), 0) / rendimientoActivo.length / 1000000).toFixed(2)}M
               </p>
             </div>
             <div className="p-4 rounded-xl bg-white/5 border border-white/5">
-              <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Mínimo (100d)</span>
+              <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Volatilidad Media</span>
               <p className="text-xl font-bold text-white tabular-nums mt-1">
-                {Math.min(...rendimientoActivo.map(r => parseFloat(r.rendimiento))).toFixed(2)}%
+                {(rendimientoActivo.reduce((acc, r) => acc + parseFloat(r.volatilidad || 0), 0) / rendimientoActivo.length).toFixed(2)}%
               </p>
             </div>
           </div>
@@ -349,7 +346,7 @@ export const Analitica = () => {
           {/* Gráfico del activo */}
           <div className="h-[250px] w-full">
             <ChartContainer
-              config={{ rendimiento: { label: "Rendimiento (%)", color: "#D4AF37" } }}
+              config={{ precio_cierre: { label: "Precio ($)", color: "#D4AF37" } }}
               className="h-full w-full [&_.recharts-cartesian-axis-tick_text]:fill-zinc-500"
             >
               <AreaChart
@@ -357,7 +354,7 @@ export const Analitica = () => {
                 margin={{ top: 10, right: 0, left: -20, bottom: 0 }}
               >
                 <defs>
-                  <linearGradient id="colorRendimientoActivo" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="colorPrecioActivo" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.4} />
                     <stop offset="95%" stopColor="#D4AF37" stopOpacity={0} />
                   </linearGradient>
@@ -381,24 +378,24 @@ export const Analitica = () => {
                   axisLine={false}
                   tickMargin={10}
                   tick={{ fill: "#71717a", fontSize: 10 }}
-                  tickFormatter={(val) => `${val.toFixed(1)}%`}
+                  tickFormatter={(val) => `$${val.toFixed(0)}`}
                 />
                 <ChartTooltip
                   cursor={{ stroke: "rgba(255,255,255,0.1)" }}
                   content={
                     <ChartTooltipContent
                       labelFormatter={(val) => new Date(val as string).toLocaleDateString("es-ES", { weekday: "short", month: "short", day: "numeric" })}
-                      formatter={(val) => [`${Number(val).toFixed(2)}%`, "Rendimiento Diario"]}
+                      formatter={(val) => [`$${Number(val).toFixed(2)}`, "Precio de Cierre"]}
                       className="bg-[#111] border border-white/10 text-white"
                     />
                   }
                 />
                 <Area
                   type="monotone"
-                  dataKey="rendimiento"
+                  dataKey="precio_cierre"
                   stroke="#D4AF37"
                   strokeWidth={2}
-                  fill="url(#colorRendimientoActivo)"
+                  fill="url(#colorPrecioActivo)"
                 />
               </AreaChart>
             </ChartContainer>

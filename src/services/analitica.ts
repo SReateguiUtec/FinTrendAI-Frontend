@@ -17,6 +17,9 @@ export interface RendimientoSimbolo {
   simbolo: string;
   fecha: string;
   rendimiento: string;
+  precio_cierre?: string;
+  volumen?: string;
+  volatilidad?: string;
 }
 
 export interface TendenciaMercado {
