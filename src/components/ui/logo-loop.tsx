@@ -200,7 +200,18 @@ const useAnimationLoop = (
             const targetSpeed = hov && hSpd !== undefined ? hSpd : tVel;
             const targetRate = tVel === 0 ? 0 : targetSpeed / tVel;
 
-            const easingFactor = 1 - Math.exp(-deltaTime / ANIMATION_CONFIG.SMOOTH_TAU);
+            const diff = Math.abs(targetRate - playbackRateRef.current);
+            if (diff < 0.001) {
+                playbackRateRef.current = targetRate;
+                if (animationRef.current) {
+                    animationRef.current.playbackRate = playbackRateRef.current;
+                }
+                rafRef.current = null;
+                return;
+            }
+
+            // Using a slightly faster easing for better responsiveness
+            const easingFactor = 1 - Math.exp(-deltaTime / 0.15); 
             playbackRateRef.current += (targetRate - playbackRateRef.current) * easingFactor;
 
             if (animationRef.current) {
@@ -210,8 +221,14 @@ const useAnimationLoop = (
             rafRef.current = requestAnimationFrame(animatePlaybackRate);
         };
 
-        lastTimestampRef.current = performance.now();
-        rafRef.current = requestAnimationFrame(animatePlaybackRate);
+        const startAnimation = () => {
+            if (rafRef.current === null) {
+                lastTimestampRef.current = performance.now();
+                rafRef.current = requestAnimationFrame(animatePlaybackRate);
+            }
+        };
+
+        startAnimation();
 
         return () => {
             if (rafRef.current !== null) {
@@ -220,6 +237,38 @@ const useAnimationLoop = (
             }
         };
     }, [targetVelocity, seqWidth, seqHeight, isVertical]);
+
+    // Separate effect to trigger the speed transition WITHOUT recreating the animation
+    useEffect(() => {
+        const animatePlaybackRate = (timestamp: number) => {
+            if (lastTimestampRef.current === null) lastTimestampRef.current = timestamp;
+            const deltaTime = Math.max(0, timestamp - lastTimestampRef.current) / 1000;
+            lastTimestampRef.current = timestamp;
+
+            const { isHovered: hov, hoverSpeed: hSpd, targetVelocity: tVel } = hoverStateRef.current;
+            const targetSpeed = hov && hSpd !== undefined ? hSpd : tVel;
+            const targetRate = tVel === 0 ? 0 : targetSpeed / tVel;
+
+            const diff = Math.abs(targetRate - playbackRateRef.current);
+            if (diff < 0.001) {
+                playbackRateRef.current = targetRate;
+                if (animationRef.current) animationRef.current.playbackRate = playbackRateRef.current;
+                rafRef.current = null;
+                return;
+            }
+
+            const easingFactor = 1 - Math.exp(-deltaTime / 0.15);
+            playbackRateRef.current += (targetRate - playbackRateRef.current) * easingFactor;
+            if (animationRef.current) animationRef.current.playbackRate = playbackRateRef.current;
+
+            rafRef.current = requestAnimationFrame(animatePlaybackRate);
+        };
+
+        if (rafRef.current === null) {
+            lastTimestampRef.current = performance.now();
+            rafRef.current = requestAnimationFrame(animatePlaybackRate);
+        }
+    }, [isHovered]);
 };
 
 export const LogoLoop = React.memo<LogoLoopProps>(

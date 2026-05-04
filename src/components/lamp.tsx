@@ -1,5 +1,4 @@
 import { Hero } from "@/components/ui/hero-lamp"
-import { TextScramble } from "@/components/ui/text-scramble"
 
 function HeroDemo() {
     return (
@@ -8,7 +7,7 @@ function HeroDemo() {
             subtitle="Analítica impulsada por IA para decisiones más inteligentes."
             actions={[
                 {
-                    label: "Empezar",
+                    label: "Comenzar",
                     href: "/dashboard",
                     variant: "default"
                 }
