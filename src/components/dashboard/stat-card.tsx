@@ -27,7 +27,7 @@ export const StatCard = ({
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-6 rounded-3xl bg-white/[0.02] border border-white/5 hover:border-[#D4AF37]/30 transition-all group relative overflow-hidden"
+      className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white/[0.02] border border-white/5 hover:border-[#D4AF37]/30 transition-all group relative overflow-hidden"
     >
       <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-10 transition-opacity">
         <Icon className="size-24" />
@@ -47,17 +47,17 @@ export const StatCard = ({
       </div>
 
       <div>
-        <p className="text-zinc-500 text-sm font-medium mb-1">{label}</p>
+        <p className="text-zinc-500 text-[10px] sm:text-sm font-medium mb-1">{label}</p>
         <h3
           className={cn(
             'font-bold text-white tracking-tight',
-            valueClassName ?? 'text-2xl',
+            valueClassName ?? 'text-lg sm:text-2xl',
           )}
         >
           {value}
         </h3>
         {subValue && (
-          <p className="text-xs text-zinc-600 mt-1 font-medium">{subValue}</p>
+          <p className="text-[9px] sm:text-xs text-zinc-600 mt-1 font-medium">{subValue}</p>
         )}
       </div>
 

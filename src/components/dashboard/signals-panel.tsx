@@ -8,12 +8,14 @@ const signals = [
   { symbol: 'TSLA', type: 'Venta', confidence: 85, price: '$176.54', change: '-2.4%' },
   { symbol: 'MSFT', type: 'Mantener', confidence: 78, price: '$412.32', change: '+0.4%' },
   { symbol: 'NVDA', type: 'Compra', confidence: 95, price: '$824.59', change: '+3.1%' },
+  { symbol: 'GOOGL', type: 'Compra', confidence: 88, price: '$142.65', change: '+1.5%' },
+  { symbol: 'AMZN', type: 'Compra', confidence: 91, price: '$178.22', change: '+2.1%' },
 ];
 
 export const SignalsPanel = () => {
   return (
-    <div className="p-6 rounded-3xl bg-white/[0.02] border border-white/5 h-full">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-6 rounded-3xl bg-white/[0.02] border border-white/5 h-full flex flex-col">
+      <div className="flex items-center justify-between mb-6 shrink-0">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg bg-[#D4AF37]/20 text-[#D4AF37]">
             <Zap className="size-4 fill-current" />
@@ -23,7 +25,7 @@ export const SignalsPanel = () => {
         <button className="text-xs text-zinc-500 hover:text-[#D4AF37] transition-colors font-bold uppercase tracking-wider">Ver todas</button>
       </div>
 
-      <div className="space-y-4">
+      <div className="flex-1 flex flex-col justify-between gap-3">
         {signals.map((signal, idx) => (
           <motion.div 
             initial={{ opacity: 0, x: 20 }}

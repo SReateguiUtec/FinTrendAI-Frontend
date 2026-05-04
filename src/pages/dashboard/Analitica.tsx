@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart3, TrendingUp, Activity, Search, ChevronDown, PieChart, Info } from 'lucide-react';
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { cn } from '@/lib/utils';
 import * as analiticaService from '@/services/analitica';
@@ -24,20 +24,20 @@ const MetricCard = ({
   description: string;
   loading?: boolean;
 }) => (
-  <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-[#D4AF37]/20 transition-all group relative overflow-hidden">
-    <div className="flex items-center gap-3 mb-4">
-      <div className="p-2 rounded-xl bg-white/5 border border-white/10 text-zinc-500 group-hover:text-[#D4AF37] group-hover:border-[#D4AF37]/20 transition-all">
-        <Icon className="size-4" />
+  <div className="p-3 sm:p-5 rounded-xl sm:rounded-2xl bg-white/[0.02] border border-white/5 hover:border-[#D4AF37]/20 transition-all group relative overflow-hidden">
+    <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-4">
+      <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 text-zinc-500 group-hover:text-[#D4AF37] group-hover:border-[#D4AF37]/20 transition-all">
+        <Icon className="size-3 sm:size-4" />
       </div>
-      <span className="text-xs text-zinc-500 font-bold uppercase tracking-widest">{label}</span>
+      <span className="text-[9px] sm:text-xs text-zinc-500 font-bold uppercase tracking-tight sm:tracking-widest truncate">{label}</span>
     </div>
-    <div className="space-y-2">
+    <div className="space-y-0.5 sm:space-y-2">
       {loading ? (
-        <Skeleton className="h-7 w-24" />
+        <Skeleton className="h-5 sm:h-7 w-16 sm:w-24" />
       ) : (
-        <span className="text-2xl font-bold text-white tabular-nums">{value || '0.00'}</span>
+        <span className="text-base sm:text-2xl font-bold text-white tabular-nums">{value || '0.00'}</span>
       )}
-      <p className="text-[10px] text-zinc-600 font-medium">{description}</p>
+      <p className="hidden sm:block text-[10px] text-zinc-600 font-medium">{description}</p>
     </div>
     <div className="absolute bottom-0 left-0 h-[1px] w-0 bg-gradient-to-r from-transparent via-[#D4AF37]/40 to-transparent group-hover:w-full transition-all duration-700" />
   </div>
@@ -47,7 +47,7 @@ export const Analitica = () => {
   const [simboloBusqueda, setSimboloBusqueda] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadingSymbol, setLoadingSymbol] = useState(false);
-  
+
   // Autocomplete states
   const [simbolosList, setSimbolosList] = useState<Simbolo[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -94,7 +94,7 @@ export const Analitica = () => {
         analiticaService.ms5.get('/api/analitica/popularidad-activos'),
         getSimbolos().catch(() => []) // Fetch symbols
       ]);
-      
+
       setSectores(secData || []);
       setTendencias(trendData || []);
       setPopulares(popResponse.data || []);
@@ -146,7 +146,7 @@ export const Analitica = () => {
               onKeyDown={(e) => e.key === 'Enter' && handleAnalizar()}
               className="bg-white/5 border border-white/10 rounded-xl py-2 pl-9 pr-4 text-sm focus:outline-none focus:border-[#D4AF37]/50 placeholder:text-zinc-600 transition-all w-44"
             />
-            
+
             {/* Popover de Recomendaciones */}
             <AnimatePresence>
               {showSuggestions && simboloBusqueda.length > 0 && (
@@ -156,8 +156,8 @@ export const Analitica = () => {
                   exit={{ opacity: 0, y: 5 }}
                   className="absolute top-full mt-2 left-0 w-[240px] max-h-[250px] overflow-y-auto bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl z-50 py-2 custom-scrollbar"
                 >
-                  {simbolosList.filter(s => 
-                    s.simbolo.toUpperCase().includes(simboloBusqueda.toUpperCase()) || 
+                  {simbolosList.filter(s =>
+                    s.simbolo.toUpperCase().includes(simboloBusqueda.toUpperCase()) ||
                     s.nombre.toUpperCase().includes(simboloBusqueda.toUpperCase())
                   ).slice(0, 8).map(s => (
                     <button
@@ -172,7 +172,7 @@ export const Analitica = () => {
                       <span className="text-[10px] text-zinc-400 truncate w-full">{s.nombre}</span>
                     </button>
                   ))}
-                  
+
                   {simbolosList.filter(s => s.simbolo.toUpperCase().includes(simboloBusqueda.toUpperCase()) || s.nombre.toUpperCase().includes(simboloBusqueda.toUpperCase())).length === 0 && (
                     <div className="px-4 py-3 text-center">
                       <span className="text-xs text-zinc-500">No se encontraron símbolos</span>
@@ -182,7 +182,7 @@ export const Analitica = () => {
               )}
             </AnimatePresence>
           </div>
-          <button 
+          <button
             onClick={() => handleAnalizar()}
             disabled={loadingSymbol}
             className="flex items-center justify-center min-w-[80px] px-4 py-2 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-sm font-bold hover:bg-[#D4AF37]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -193,26 +193,26 @@ export const Analitica = () => {
       </div>
 
       {/* Métricas resumen */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative">
-        <MetricCard 
-          label="Rendimiento promedio" 
+      <div className="grid grid-cols-3 md:grid-cols-3 gap-2 sm:gap-4 relative">
+        <MetricCard
+          label="Rendimiento promedio"
           value={`${avgRendimiento.toFixed(2)}%`}
-          icon={TrendingUp} 
-          description="Promedio ponderado de todos los sectores" 
+          icon={TrendingUp}
+          description="Promedio ponderado de todos los sectores"
           loading={loading}
         />
-        <MetricCard 
-          label="Volumen total" 
+        <MetricCard
+          label="Volumen total"
           value={(totalVolumen / 1e9).toFixed(2) + 'B'}
-          icon={Activity} 
-          description="Suma agregada de volumen en el periodo" 
+          icon={Activity}
+          description="Suma agregada de volumen en el periodo"
           loading={loading}
         />
-        <MetricCard 
-          label="Precio promedio" 
+        <MetricCard
+          label="Precio promedio"
           value={tendencias.length > 0 ? `$${parseFloat(tendencias[0].precio_promedio).toFixed(2)}` : '---'}
-          icon={BarChart3} 
-          description="Media de cierre del mercado (último registro)" 
+          icon={BarChart3}
+          description="Media de cierre del mercado (último registro)"
           loading={loading}
         />
       </div>
@@ -222,43 +222,81 @@ export const Analitica = () => {
         <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-bold text-white">Rendimiento por Sector</h3>
-              <p className="text-xs text-zinc-500 mt-0.5">Promedio histórico ponderado</p>
+              <h3 className="text-lg font-bold text-white uppercase tracking-tight">Rendimiento por Sector</h3>
+              <p className="text-[10px] text-zinc-500 uppercase tracking-[0.2em] font-medium">Promedio histórico ponderado</p>
             </div>
           </div>
 
-          {/* Barras dinámicas */}
-          <div className="space-y-3 min-h-[220px] flex flex-col justify-center">
+          <div className="min-h-[220px] w-full flex flex-col justify-center">
             {loading ? (
-              [...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <Skeleton className="h-3 w-20" />
-                  <div className="flex-1 h-5 bg-white/5 rounded-full" />
-                  <Skeleton className="h-3 w-10" />
-                </div>
-              ))
+              <div className="flex items-end justify-between gap-2 h-[180px]">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="flex-1 bg-white/5 rounded-t-lg animate-pulse" style={{ height: `${20 + Math.random() * 60}%` }} />
+                ))}
+              </div>
             ) : sectores.length > 0 ? (
-              sectores.slice(0, 6).map((s) => (
-                <div key={s.sector} className="flex items-center gap-3 group/bar">
-                  <span className="text-[10px] text-zinc-500 w-20 shrink-0 font-medium">{s.sector}</span>
-                  <div className="flex-1 h-5 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.min(Math.abs(parseFloat(s.rendimiento_promedio)) * 10, 100)}%` }}
-                      className={cn(
-                        "h-full rounded-full transition-all",
-                        parseFloat(s.rendimiento_promedio) >= 0 ? "bg-[#D4AF37]/40" : "bg-red-500/30"
-                      )}
+              <div className="h-[200px] w-full mt-2">
+                <ChartContainer
+                  config={Object.fromEntries(sectores.map(s => [s.sector, { label: s.sector, color: '#D4AF37' }]))}
+                  className="h-full w-full [&_.recharts-cartesian-axis-tick_text]:fill-zinc-600"
+                >
+                  <BarChart data={sectores.slice(0, 8)} margin={{ bottom: 20 }}>
+                    <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.03)" />
+                    <XAxis
+                      dataKey="sector"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#52525b', fontSize: 8 }}
+                      interval={0}
+                      height={30}
+                      tickFormatter={(val) => {
+                        const mapping: Record<string, string> = {
+                          'Consumer Cyclical': 'CYCL',
+                          'Consumer Defensive': 'DEF',
+                          'Communication Services': 'COMM',
+                          'Financial Services': 'FIN',
+                          'Healthcare': 'HLTH',
+                          'Technology': 'TECH',
+                          'Basic Materials': 'MAT',
+                          'Real Estate': 'RE',
+                          'Utilities': 'UTIL',
+                          'Energy': 'ENGY',
+                          'Industrials': 'IND',
+                          'Financial': 'FIN',
+                          'Technology ': 'TECH'
+                        };
+                        return mapping[val] || (val.length > 5 ? val.substring(0, 4) : val);
+                      }}
                     />
-                  </div>
-                  <span className={cn(
-                    "text-[10px] font-bold tabular-nums w-10 text-right",
-                    parseFloat(s.rendimiento_promedio) >= 0 ? "text-[#D4AF37]" : "text-red-400"
-                  )}>
-                    {parseFloat(s.rendimiento_promedio).toFixed(2)}%
-                  </span>
-                </div>
-              ))
+                    <YAxis hide domain={['auto', 'auto']} />
+                    <ChartTooltip
+                      cursor={{ fill: 'rgba(255,255,255,0.02)' }}
+                      content={
+                        <ChartTooltipContent
+                          className="bg-[#0c0c0c]/90 backdrop-blur-md border-white/10"
+                          formatter={(val) => [
+                            <span key="val" className="font-bold text-white">{Number(val).toFixed(2)}%</span>,
+                            <span key="name" className="text-zinc-500 ml-2">Rendimiento</span>
+                          ]}
+                        />
+                      }
+                    />
+                    <Bar
+                      dataKey="rendimiento_promedio"
+                      radius={[6, 6, 0, 0]}
+                    >
+                      {sectores.slice(0, 8).map((_, index, arr) => (
+                        <Cell
+                          key={`sector-${index}`}
+                          fill={index === arr.length - 1 ? "#D4AF37" : "rgba(212, 175, 55, 0.15)"}
+                          stroke={index === arr.length - 1 ? "none" : "rgba(212, 175, 55, 0.3)"}
+                          strokeWidth={1}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ChartContainer>
+              </div>
             ) : (
               <p className="text-center text-xs text-zinc-700">No hay datos de sectores disponibles</p>
             )}
@@ -268,8 +306,8 @@ export const Analitica = () => {
         {/* Tendencias del mercado */}
         <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
           <div>
-            <h3 className="font-bold text-white">Tendencias del Mercado</h3>
-            <p className="text-xs text-zinc-500 mt-0.5">Evolución del precio promedio</p>
+            <h3 className="text-lg font-bold text-white uppercase tracking-tight">Tendencias del Mercado</h3>
+            <p className="text-[10px] text-zinc-500 uppercase tracking-[0.2em] font-medium">Evolución del precio promedio</p>
           </div>
 
           <div className="min-h-[220px] flex flex-col justify-center">
@@ -291,61 +329,49 @@ export const Analitica = () => {
                       color: "#D4AF37",
                     },
                   }}
-                  className="h-full w-full [&_.recharts-cartesian-axis-tick_text]:fill-zinc-500"
+                  className="h-full w-full [&_.recharts-cartesian-axis-tick_text]:fill-zinc-600"
                 >
-                  <AreaChart
-                    data={[...tendencias].reverse()}
-                    margin={{ top: 5, right: 0, left: -20, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient id="colorTendencia" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#D4AF37" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                  <BarChart data={[...tendencias].reverse().slice(-30)}>
+                    <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.03)" />
                     <XAxis
                       dataKey="dia"
-                      tickLine={false}
                       axisLine={false}
-                      tickMargin={10}
-                      tick={{ fill: "#71717a", fontSize: 10 }}
+                      tickLine={false}
+                      tick={{ fill: '#52525b', fontSize: 10 }}
                       tickFormatter={(val) => {
                         const date = new Date(val);
-                        return date.toLocaleDateString("es-ES", { month: "short", day: "numeric" });
+                        return date.toLocaleDateString("es-ES", { month: "short" }).toLowerCase();
                       }}
+                      minTickGap={20}
                     />
-                    <YAxis
-                      domain={['auto', 'auto']}
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={10}
-                      tick={{ fill: "#71717a", fontSize: 10 }}
-                      tickFormatter={(val) => `$${val.toFixed(0)}`}
-                    />
+                    <YAxis hide domain={['auto', 'auto']} />
                     <ChartTooltip
-                      cursor={{ stroke: "rgba(212,175,55,0.2)", strokeWidth: 2 }}
+                      cursor={{ fill: 'rgba(255,255,255,0.02)' }}
                       content={
                         <ChartTooltipContent
-                          labelFormatter={(val) => new Date(val as string).toLocaleDateString("es-ES", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                          formatter={(val, name) => [
-                            <span key="val" className="font-bold ml-2 text-white">
-                              ${Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>,
-                            <span key="name" className="text-zinc-500">{name}</span>
+                          className="bg-[#0c0c0c]/90 backdrop-blur-md border-white/10"
+                          labelFormatter={(val) => new Date(val as string).toLocaleDateString("es-ES", { month: 'long', day: 'numeric' })}
+                          formatter={(val) => [
+                            <span key="val" className="font-bold text-white">${Number(val).toFixed(2)}</span>,
+                            <span key="name" className="text-zinc-500 ml-2">Precio</span>
                           ]}
-                          className="bg-[#0c0c0c]/90 backdrop-blur-md border-white/10 text-white rounded-xl shadow-2xl p-4"
                         />
                       }
                     />
-                    <Area
-                      type="monotone"
+                    <Bar
                       dataKey="precio_promedio"
-                      stroke="#D4AF37"
-                      strokeWidth={2}
-                      fill="url(#colorTendencia)"
-                    />
-                  </AreaChart>
+                      radius={[4, 4, 0, 0]}
+                    >
+                      {[...tendencias].reverse().slice(-30).map((_, index, arr) => (
+                        <Cell
+                          key={`trend-${index}`}
+                          fill={index === arr.length - 1 ? "#D4AF37" : "rgba(212, 175, 55, 0.15)"}
+                          stroke={index === arr.length - 1 ? "none" : "rgba(212, 175, 55, 0.3)"}
+                          strokeWidth={1}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
                 </ChartContainer>
               </div>
             ) : (
@@ -360,19 +386,19 @@ export const Analitica = () => {
 
       {/* Análisis por Símbolo / Populares */}
       {rendimientoActivo.length > 0 && simboloBusqueda ? (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="relative group"
         >
           {/* Decorative Glow */}
           <div className="absolute -inset-0.5 bg-gradient-to-r from-[#D4AF37]/20 via-transparent to-[#D4AF37]/10 rounded-3xl blur opacity-30 group-hover:opacity-50 transition duration-1000"></div>
-          
+
           <div className="relative p-5 sm:p-8 rounded-3xl bg-[#080808] border border-white/10 backdrop-blur-xl overflow-hidden shadow-2xl">
             {/* Background Texture/Pattern */}
-            <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
-                 style={{ backgroundImage: 'radial-gradient(#D4AF37 0.5px, transparent 0.5px)', backgroundSize: '24px 24px' }}></div>
-            
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
+              style={{ backgroundImage: 'radial-gradient(#D4AF37 0.5px, transparent 0.5px)', backgroundSize: '24px 24px' }}></div>
+
             <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 sm:mb-10">
               <div className="space-y-1">
                 <div className="flex items-center gap-2 sm:gap-3">
@@ -383,8 +409,8 @@ export const Analitica = () => {
                 </div>
                 <p className="text-[10px] text-zinc-500 ml-3 sm:ml-4 font-medium uppercase tracking-[0.1em] opacity-80">Intelligence Report • 100 Días</p>
               </div>
-              <button 
-                onClick={() => setRendimientoActivo([])} 
+              <button
+                onClick={() => setRendimientoActivo([])}
                 className="self-start sm:self-center px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-[9px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white hover:bg-white/10 transition-all active:scale-95"
               >
                 Cerrar Terminal
@@ -394,18 +420,18 @@ export const Analitica = () => {
             {/* Micro-métricas del activo - Premium Grid Responsivo */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-6 mb-8 sm:mb-10">
               {[
-                { 
-                  label: "Último Precio", 
+                {
+                  label: "Último Precio",
                   value: `$${parseFloat(rendimientoActivo[0]?.precio_cierre || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
                   className: "col-span-1"
                 },
-                { 
-                  label: "Vol. (100d)", 
+                {
+                  label: "Vol. (100d)",
                   value: `${(rendimientoActivo.reduce((acc, r) => acc + parseFloat(r.volumen || 0), 0) / rendimientoActivo.length / 1000000).toFixed(2)}M`,
                   className: "col-span-1"
                 },
-                { 
-                  label: "Volatilidad Media", 
+                {
+                  label: "Volatilidad Media",
                   value: `${(rendimientoActivo.reduce((acc, r) => acc + parseFloat(r.volatilidad || 0), 0) / rendimientoActivo.length).toFixed(2)}%`,
                   className: "col-span-2 sm:col-span-1"
                 }
@@ -435,7 +461,7 @@ export const Analitica = () => {
               >
                 <AreaChart
                   data={[...rendimientoActivo].reverse()}
-                  margin={{ top: 20, right: 10, left: -20, bottom: 0 }}
+                  margin={{ top: 20, right: 10, left: -20, bottom: 20 }}
                 >
                   <defs>
                     <linearGradient id="colorPrecioActivo" x1="0" y1="0" x2="0" y2="1">
@@ -444,10 +470,10 @@ export const Analitica = () => {
                       <stop offset="100%" stopColor="#D4AF37" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid 
-                    strokeDasharray="0" 
-                    stroke="rgba(255,255,255,0.03)" 
-                    vertical={false} 
+                  <CartesianGrid
+                    strokeDasharray="0"
+                    stroke="rgba(255,255,255,0.03)"
+                    vertical={false}
                   />
                   <XAxis
                     dataKey="fecha"
@@ -475,10 +501,10 @@ export const Analitica = () => {
                       <ChartTooltipContent
                         labelFormatter={(val) => new Date(val as string).toLocaleDateString("es-ES", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                         formatter={(val, name) => [
-                          <span key="val" className="font-bold ml-2 text-white">
+                          <span key="val" className="font-bold text-white">
                             ${Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>,
-                          <span key="name" className="text-zinc-500">{name}</span>
+                          <span key="name" className="text-zinc-500 ml-2">{name}</span>
                         ]}
                         className="bg-[#0c0c0c]/90 backdrop-blur-md border-white/10 text-white rounded-xl shadow-2xl p-4"
                       />
@@ -499,58 +525,90 @@ export const Analitica = () => {
           </div>
         </motion.div>
       ) : (
-        <div className="p-4 sm:p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-bold text-white text-base sm:text-lg">Activos Populares en Plataforma</h3>
-              <p className="text-xs text-zinc-500 mt-0.5">Top 10 activos con más menciones en estrategias</p>
-            </div>
-          </div>
+        <div className="relative group">
+          {/* Decorative Glow */}
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-[#D4AF37]/10 via-transparent to-[#D4AF37]/5 rounded-3xl blur opacity-20 group-hover:opacity-30 transition duration-1000"></div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 px-2 sm:px-4 py-2 text-[10px] uppercase font-bold tracking-widest text-zinc-600 border-b border-white/5">
-            <span>Activo</span>
-            <span className="hidden sm:block">Estrategias Asociadas</span>
-            <span className="text-right">Menciones</span>
-            <span className="hidden sm:block text-right">Relevancia</span>
-          </div>
-
-          <div className="divide-y divide-white/5">
-            {loading ? (
-               [...Array(3)].map((_, i) => (
-                <div key={i} className="grid grid-cols-2 sm:grid-cols-4 items-center p-4">
-                  <Skeleton className="h-3 w-12" />
-                  <Skeleton className="hidden sm:block h-3 w-40" />
-                  <Skeleton className="h-3 w-14 ml-auto" />
-                  <Skeleton className="hidden sm:block h-2 w-full ml-4" />
-                </div>
-              ))
-            ) : populares.length > 0 ? (
-              populares.map((p, i) => (
-                <div key={p.simbolo} className="grid grid-cols-2 sm:grid-cols-4 items-center p-3 sm:p-4 hover:bg-white/[0.01] transition-colors group/row">
-                  <div className="flex items-center gap-2">
-                    <div className="size-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-bold text-white group-hover/row:border-[#D4AF37]/30 transition-all">
-                      {p.simbolo[0]}
-                    </div>
-                    <span className="text-sm font-bold text-white">{p.simbolo}</span>
-                  </div>
-                  <span className="hidden sm:block text-xs text-zinc-500 italic truncate pr-4">{p.estrategias}</span>
-                  <span className="text-sm font-bold text-zinc-300 text-right tabular-nums">{p.menciones}</span>
-                  <div className="hidden sm:block pl-8">
-                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-[#D4AF37]/20 to-[#D4AF37]/60 rounded-full" 
-                        style={{ width: `${Math.max(100 - (i * 15), 10)}%` }} 
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-3 py-10">
-                <Info className="size-7 text-zinc-800" />
-                <p className="text-xs text-zinc-600 text-center">No hay datos de popularidad disponibles</p>
+          <div className="relative p-6 sm:p-8 rounded-3xl bg-[#080808]/40 border border-white/5 backdrop-blur-sm overflow-hidden shadow-2xl space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h3 className="text-xl font-bold text-white uppercase tracking-tight">Activos Populares</h3>
+                <p className="text-[10px] text-zinc-500 uppercase tracking-[0.2em] font-medium">Top 10 activos con más relevancia</p>
               </div>
-            )}
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 w-fit">
+                <div className="size-1.5 rounded-full bg-[#D4AF37] animate-pulse" />
+                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Live Updates</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {loading ? (
+                [...Array(5)].map((_, i) => (
+                  <div key={i} className="h-16 bg-white/[0.02] border border-white/5 rounded-2xl animate-pulse" />
+                ))
+              ) : populares.length > 0 ? (
+                populares.slice(0, 6).map((p, i) => (
+                  <div key={p.simbolo} className="relative group/row">
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#D4AF37]/5 to-transparent opacity-0 group-hover/row:opacity-100 transition-all rounded-2xl" />
+
+                    <div className="relative flex items-center justify-between p-3 sm:p-4 rounded-2xl border border-transparent group-hover/row:border-white/5 transition-all">
+                      <div className="flex items-center gap-4">
+                        <div className="relative">
+                          <div className={cn(
+                            "size-10 rounded-xl flex items-center justify-center text-xs font-bold transition-all border",
+                            i < 3 ? "bg-[#D4AF37]/10 border-[#D4AF37]/20 text-[#D4AF37]" : "bg-white/5 border-white/10 text-zinc-400"
+                          )}>
+                            {p.simbolo[0]}
+                          </div>
+                          <div className={cn(
+                            "absolute -top-1.5 -left-1.5 size-5 rounded-full flex items-center justify-center text-[8px] font-black border-2 border-[#080808]",
+                            i === 0 ? "bg-[#D4AF37] text-black" :
+                              i === 1 ? "bg-zinc-300 text-black" :
+                                i === 2 ? "bg-amber-600 text-white" : "bg-zinc-800 text-zinc-400"
+                          )}>
+                            {i + 1}
+                          </div>
+                        </div>
+
+                        <div className="space-y-0.5">
+                          <h4 className="text-base font-bold text-white tracking-tight">{p.simbolo}</h4>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">
+                              {p.menciones > 1000 ? `${(p.menciones / 100).toFixed(0)} Estrategias` : 'Core Asset'}
+                            </span>
+                            <div className="size-1 rounded-full bg-zinc-800" />
+                            <span className="text-[9px] text-zinc-600 font-medium tracking-tight">Rel: {(98 - i * 1.5).toFixed(1)}%</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right space-y-1">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <span className="text-sm font-bold text-white tabular-nums">{p.menciones.toLocaleString()}</span>
+                          <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-tighter">Hits</span>
+                        </div>
+                        {/* Progress bar subtle */}
+                        <div className="w-20 sm:w-32 h-1 bg-white/5 rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${(p.menciones / populares[0].menciones) * 100}%` }}
+                            className={cn(
+                              "h-full rounded-full",
+                              i < 3 ? "bg-[#D4AF37]" : "bg-zinc-600"
+                            )}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 space-y-3 opacity-50">
+                  <Activity className="size-8 text-zinc-700" />
+                  <p className="text-xs text-zinc-500 uppercase tracking-widest text-center">No matching assets found</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

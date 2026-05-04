@@ -3,7 +3,7 @@ import { StatCard } from '@/components/dashboard/stat-card';
 import { MarketChart } from '@/components/dashboard/market-chart';
 import { SignalsPanel } from '@/components/dashboard/signals-panel';
 import { cn } from '@/lib/utils';
-import { TrendingUp, ArrowUpRight, BarChart3, Zap, Layers, Loader2 } from 'lucide-react';
+import { TrendingUp, BarChart3, Zap, Layers, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getUltimoPrecio, getSimbolos, type PrecioAccion } from '@/services/precios';
 
@@ -29,17 +29,7 @@ const Skeleton = ({ className }: { className?: string }) => (
   <div className={cn('animate-pulse rounded-xl bg-white/5 inline-block', className)} />
 );
 
-function fmtPrice(p: number | null) {
-  if (p === null) return <Skeleton className="h-4 w-16" />;
-  return `$${p.toFixed(2)}`;
-}
 
-function fmtVol(v: number | null) {
-  if (v === null) return <Skeleton className="h-4 w-12" />;
-  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
-  if (v >= 1_000) return `${(v / 1_000).toFixed(0)}K`;
-  return String(v);
-}
 
 /* ── Page ───────────────────────────────────────────────── */
 export const VistaGeneral = () => {
@@ -114,7 +104,7 @@ export const VistaGeneral = () => {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <StatCard
           label="Símbolos activos"
           value={cantidadSimbolosActivos === null ? '…' : String(cantidadSimbolosActivos)}
@@ -167,73 +157,7 @@ export const VistaGeneral = () => {
         <SignalsPanel />
       </div>
 
-      {/* Tabla de movimientos */}
-      <div className="p-8 rounded-3xl bg-white/[0.02] border border-white/5">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h3 className="text-xl font-bold text-white">Movimiento del mercado</h3>
-            <p className="text-xs text-zinc-500 mt-1">Últimos precios disponibles</p>
-          </div>
-          {loading && <Loader2 className="size-4 animate-spin text-zinc-500" />}
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-separate border-spacing-y-4">
-            <thead>
-              <tr className="text-zinc-500 text-xs uppercase font-bold tracking-widest">
-                <th className="px-4 pb-2">Activo</th>
-                <th className="px-4 pb-2">Precio cierre</th>
-                <th className="px-4 pb-2">Volumen</th>
-                <th className="px-4 pb-2">Variación</th>
-                <th className="px-4 pb-2 text-right">Detalle</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(row => {
-                const isUp = (row.variacion ?? 0) >= 0;
-                return (
-                  <tr
-                    key={row.simbolo}
-                    className="bg-white/[0.03] group hover:bg-white/5 transition-colors"
-                  >
-                    <td className="px-4 py-4 rounded-l-2xl">
-                      <div className="flex items-center gap-3">
-                        <div className="size-10 rounded-xl bg-[#0a0a0a] border border-white/10 flex items-center justify-center font-bold text-xs">
-                          {row.simbolo.substring(0, 2)}
-                        </div>
-                        <div>
-                          <p className="font-bold text-white">{row.nombre}</p>
-                          <p className="text-xs text-zinc-500">{row.simbolo}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 font-bold">{fmtPrice(row.precio)}</td>
-                    <td className="px-4 py-4 font-medium text-zinc-400">{fmtVol(row.volumen)}</td>
-                    <td className={cn(
-                      'px-4 py-4 font-bold',
-                      row.variacion === null ? '' : isUp ? 'text-emerald-500' : 'text-red-500'
-                    )}>
-                      {row.variacion === null
-                        ? <Skeleton className="h-4 w-14" />
-                        : `${isUp ? '+' : ''}${row.variacion.toFixed(2)}%`
-                      }
-                    </td>
-                    <td className="px-4 py-4 text-right rounded-r-2xl">
-                      <button
-                        type="button"
-                        title="Ver símbolo"
-                        className="p-2 hover:bg-white/10 rounded-lg transition-colors text-zinc-500 hover:text-white"
-                      >
-                        <ArrowUpRight className="size-4" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   );
 };
+
