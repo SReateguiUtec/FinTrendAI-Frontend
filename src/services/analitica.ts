@@ -28,8 +28,10 @@ export interface TendenciaMercado {
   volumen_total: string;
 }
 
-export async function getRendimientoSector(): Promise<RendimientoSector[]> {
-  const { data } = await ms5.get<RendimientoSector[]>('/api/analitica/rendimiento-sector');
+export async function getRendimientoSector(periodo: string = '30d'): Promise<RendimientoSector[]> {
+  const { data } = await ms5.get<RendimientoSector[]>('/api/analitica/rendimiento-sector', {
+    params: { periodo }
+  });
   return data;
 }
 

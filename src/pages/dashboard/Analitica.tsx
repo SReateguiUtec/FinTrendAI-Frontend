@@ -48,11 +48,14 @@ export const Analitica = () => {
   const [loading, setLoading] = useState(false);
   const [loadingSymbol, setLoadingSymbol] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [periodoSeleccionado, setPeriodoSeleccionado] = useState('30d');
+  const [showPeriodOptions, setShowPeriodOptions] = useState(false);
 
   // Autocomplete states
   const [simbolosList, setSimbolosList] = useState<Simbolo[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
 
   // Data states
   const [sectores, setSectores] = useState<any[]>([]);
@@ -71,11 +74,28 @@ export const Analitica = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Cargar lista de símbolos al montar para el autocompletado
+  useEffect(() => {
+    getSimbolos()
+      .then(setSimbolosList)
+      .catch((err) => console.error('Error loading symbols:', err));
+  }, []);
+
+  // Scroll automático a los resultados cuando se carga un activo
+  useEffect(() => {
+    if (rendimientoActivo.length > 0 && dataLoaded) {
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [rendimientoActivo, dataLoaded]);
+
   const handleAnalizar = async (simboloAAnalizar = simboloBusqueda) => {
     if (!simboloAAnalizar) return;
     setSimboloBusqueda(simboloAAnalizar);
     setShowSuggestions(false);
     setLoadingSymbol(true);
+    setDataLoaded(true); // Desbloquear la vista de dashboard
     try {
       const data = await analiticaService.getRendimientoSimbolo(simboloAAnalizar);
       setRendimientoActivo(data || []);
@@ -86,21 +106,21 @@ export const Analitica = () => {
     }
   };
 
-  const fetchAnalitica = async () => {
+  const fetchAnalitica = async (periodo = periodoSeleccionado) => {
     setLoading(true);
     setDataLoaded(true);
+    setPeriodoSeleccionado(periodo);
+    setShowPeriodOptions(false);
     try {
-      const [secData, trendData, popResponse, simbolosData] = await Promise.all([
-        analiticaService.getRendimientoSector(),
+      const [secData, trendData, popResponse] = await Promise.all([
+        analiticaService.getRendimientoSector(periodo),
         analiticaService.getTendencias(),
         analiticaService.ms5.get('/api/analitica/popularidad-activos'),
-        getSimbolos().catch(() => []) // Fetch symbols
       ]);
 
       setSectores(secData || []);
       setTendencias(trendData || []);
       setPopulares(popResponse.data || []);
-      setSimbolosList(simbolosData || []);
     } catch (error) {
       console.error('Error fetching analytics:', error);
     } finally {
@@ -120,7 +140,7 @@ export const Analitica = () => {
     <div className="p-8 space-y-8">
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-4">
           <div className="w-1.5 h-10 bg-[#D4AF37] rounded-full shadow-[0_0_15px_rgba(212,175,55,0.3)]" />
           <h1 className="text-3xl font-black tracking-tighter uppercase flex items-baseline">
@@ -129,86 +149,133 @@ export const Analitica = () => {
           </h1>
         </motion.div>
 
-        {!dataLoaded && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex items-center"
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+          <div
+            className="relative group/menu"
+            onMouseEnter={() => setShowPeriodOptions(true)}
+            onMouseLeave={() => setShowPeriodOptions(false)}
           >
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex"
+              >
+                <button
+                  onClick={() => setShowPeriodOptions(!showPeriodOptions)}
+                  className="flex items-center justify-center gap-3 px-6 py-2.5 rounded-lg bg-transparent border border-white/10 text-white hover:border-[#D4AF37]/50 hover:bg-white/[0.02] transition-all duration-300 group shadow-none w-full sm:w-auto"
+                >
+                  <span className="text-[11px] font-medium tracking-[0.1em] whitespace-nowrap">
+                    {periodoSeleccionado === 'diario' ? 'Analítica Diaria' :
+                      periodoSeleccionado === '6m' ? 'Analítica 6 Meses' :
+                        'Analítica 30 Días'}
+                  </span>
+                  {loading ? (
+                    <Activity className="size-3.5 animate-spin text-[#D4AF37]" />
+                  ) : (
+                    <ChevronDown className={cn("size-3.5 text-zinc-500 transition-transform duration-300", showPeriodOptions && "rotate-180")} />
+                  )}
+                </button>
+              </motion.div>
+
+              <AnimatePresence>
+                {showPeriodOptions && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute top-full right-0 mt-2 w-48 bg-[#0c0c0c] border border-white/10 rounded-xl shadow-2xl z-[60] overflow-hidden py-1"
+                  >
+                    {[
+                      { id: 'diario', label: 'Analítica Diaria', desc: 'Promedio intradía' },
+                      { id: '30d', label: 'Últimos 30 Días', desc: 'Rendimiento mensual' },
+                      { id: '6m', label: 'Últimos 6 Meses', desc: 'Tendencia semestral' }
+                    ].map((opt) => (
+                      <button
+                        key={opt.id}
+                        onClick={() => fetchAnalitica(opt.id)}
+                        className="w-full px-4 py-3 text-left hover:bg-white/5 transition-colors group/item"
+                      >
+                        <div className="flex flex-col">
+                          <span className={cn(
+                            "text-[11px] font-bold tracking-wider transition-colors",
+                            periodoSeleccionado === opt.id ? "text-[#D4AF37]" : "text-white group-hover/item:text-[#D4AF37]"
+                          )}>
+                            {opt.label}
+                          </span>
+                          <span className="text-[9px] text-zinc-600 font-medium">{opt.desc}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+          {/* Buscador de símbolo con Autocompletado */}
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex gap-2">
+            <div className="relative flex-1" ref={searchRef}>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-zinc-500" />
+              <input
+                type="text"
+                placeholder="Símbolo (ej. AAPL)"
+                value={simboloBusqueda}
+                onChange={(e) => {
+                  setSimboloBusqueda(e.target.value.toUpperCase());
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAnalizar()}
+                className="bg-transparent border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-[11px] text-white tracking-widest focus:outline-none focus:border-white/20 placeholder:text-zinc-600 transition-all w-full sm:w-48"
+              />
+
+              {/* Popover de Recomendaciones */}
+              <AnimatePresence>
+                {showSuggestions && simboloBusqueda.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 5 }}
+                    className="absolute top-full mt-2 left-0 w-[240px] max-h-[250px] overflow-y-auto bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl z-50 py-2 custom-scrollbar"
+                  >
+                    {simbolosList.filter(s =>
+                      s.simbolo.toUpperCase().includes(simboloBusqueda.toUpperCase()) ||
+                      s.nombre.toUpperCase().includes(simboloBusqueda.toUpperCase())
+                    ).slice(0, 8).map(s => (
+                      <button
+                        key={s.simbolo}
+                        onClick={() => handleAnalizar(s.simbolo)}
+                        className="w-full px-4 py-2 text-left hover:bg-white/5 transition-colors flex flex-col items-start gap-0.5 group"
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-sm font-bold text-white group-hover:text-[#D4AF37] transition-colors">{s.simbolo}</span>
+                          <span className="text-[9px] text-zinc-500 uppercase px-1.5 py-0.5 rounded bg-white/5">{s.sector || 'N/A'}</span>
+                        </div>
+                        <span className="text-[10px] text-zinc-400 truncate w-full">{s.nombre}</span>
+                      </button>
+                    ))}
+
+                    {simbolosList.filter(s => s.simbolo.toUpperCase().includes(simboloBusqueda.toUpperCase()) || s.nombre.toUpperCase().includes(simboloBusqueda.toUpperCase())).length === 0 && (
+                      <div className="px-4 py-3 text-center">
+                        <span className="text-xs text-zinc-500">No se encontraron símbolos</span>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
             <button
-              onClick={fetchAnalitica}
-              className="flex items-center gap-3 px-6 py-2.5 rounded-lg bg-transparent border border-white/10 text-white hover:border-[#D4AF37]/50 hover:bg-white/[0.02] transition-all duration-300 group shadow-none"
+              onClick={() => handleAnalizar()}
+              disabled={loadingSymbol}
+              className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-transparent border border-white/10 text-white hover:bg-white/5 transition-all duration-300 disabled:opacity-50"
             >
-              <span className="text-[11px] font-medium tracking-[0.1em]">Iniciar proceso de analítica</span>
-              <Activity className="size-3.5 text-zinc-500 group-hover:text-[#D4AF37] transition-colors" />
+              {loadingSymbol ? (
+                <Activity className="size-3.5 animate-spin text-white" />
+              ) : (
+                <span className="text-[11px] font-bold tracking-[0.15em] whitespace-nowrap">Analizar</span>
+              )}
             </button>
           </motion.div>
-        )}
-
-        {/* Buscador de símbolo con Autocompletado */}
-        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex gap-2">
-          <div className="relative" ref={searchRef}>
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-zinc-500" />
-            <input
-              type="text"
-              placeholder="Símbolo (ej. AAPL)"
-              value={simboloBusqueda}
-              onChange={(e) => {
-                setSimboloBusqueda(e.target.value.toUpperCase());
-                setShowSuggestions(true);
-              }}
-              onFocus={() => setShowSuggestions(true)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAnalizar()}
-              className="bg-transparent border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-[11px] text-white tracking-widest focus:outline-none focus:border-white/20 placeholder:text-zinc-600 transition-all w-48"
-            />
-
-            {/* Popover de Recomendaciones */}
-            <AnimatePresence>
-              {showSuggestions && simboloBusqueda.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 5 }}
-                  className="absolute top-full mt-2 left-0 w-[240px] max-h-[250px] overflow-y-auto bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl z-50 py-2 custom-scrollbar"
-                >
-                  {simbolosList.filter(s =>
-                    s.simbolo.toUpperCase().includes(simboloBusqueda.toUpperCase()) ||
-                    s.nombre.toUpperCase().includes(simboloBusqueda.toUpperCase())
-                  ).slice(0, 8).map(s => (
-                    <button
-                      key={s.simbolo}
-                      onClick={() => handleAnalizar(s.simbolo)}
-                      className="w-full px-4 py-2 text-left hover:bg-white/5 transition-colors flex flex-col items-start gap-0.5 group"
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <span className="text-sm font-bold text-white group-hover:text-[#D4AF37] transition-colors">{s.simbolo}</span>
-                        <span className="text-[9px] text-zinc-500 uppercase px-1.5 py-0.5 rounded bg-white/5">{s.sector || 'N/A'}</span>
-                      </div>
-                      <span className="text-[10px] text-zinc-400 truncate w-full">{s.nombre}</span>
-                    </button>
-                  ))}
-
-                  {simbolosList.filter(s => s.simbolo.toUpperCase().includes(simboloBusqueda.toUpperCase()) || s.nombre.toUpperCase().includes(simboloBusqueda.toUpperCase())).length === 0 && (
-                    <div className="px-4 py-3 text-center">
-                      <span className="text-xs text-zinc-500">No se encontraron símbolos</span>
-                    </div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-          <button
-            onClick={() => handleAnalizar()}
-            disabled={loadingSymbol}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-transparent border border-white/10 text-white hover:bg-white/5 transition-all duration-300 disabled:opacity-50"
-          >
-            {loadingSymbol ? (
-              <Activity className="size-3.5 animate-spin text-white" />
-            ) : (
-              <span className="text-[11px] font-bold tracking-[0.15em]">Analizar</span>
-            )}
-          </button>
-        </motion.div>
+        </div>
       </div>
 
       {/* Contenido Condicional */}
@@ -234,7 +301,11 @@ export const Analitica = () => {
               label="Rendimiento promedio"
               value={`${avgRendimiento.toFixed(2)}%`}
               icon={TrendingUp}
-              description="Promedio ponderado de todos los sectores"
+              description={
+                periodoSeleccionado === 'diario' ? "Promedio intradía ponderado" :
+                  periodoSeleccionado === '6m' ? "Rendimiento medio semestral (6m)" :
+                    "Rendimiento medio mensual (30 días)"
+              }
               loading={loading}
             />
             <MetricCard
@@ -259,7 +330,11 @@ export const Analitica = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-bold text-white tracking-tight">Rendimiento por sector</h3>
-                  <p className="text-[10px] text-zinc-500 tracking-[0.1em] font-medium">Promedio histórico ponderado</p>
+                  <p className="text-[10px] text-zinc-500 tracking-[0.1em] font-medium">
+                    {periodoSeleccionado === 'diario' ? 'Promedio histórico ponderado' :
+                      periodoSeleccionado === '6m' ? 'Rendimiento acumulado (6 meses)' :
+                        'Rendimiento acumulado (30 días)'}
+                  </p>
                 </div>
               </div>
 
@@ -423,6 +498,7 @@ export const Analitica = () => {
           {/* Análisis por Símbolo / Populares */}
           {rendimientoActivo.length > 0 && simboloBusqueda ? (
             <motion.div
+              ref={resultsRef}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="relative group"
