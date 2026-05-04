@@ -26,9 +26,6 @@ export function OpeningScramble({
     >
       <div className="mx-auto flex max-w-3xl flex-col items-center gap-2 text-center">
         <div className="flex flex-col items-center gap-2">
-          <p className="font-display text-[10px] font-semibold uppercase leading-none tracking-[0.35em] text-zinc-600">
-            FinTrend
-          </p>
         </div>
         <TextScramble
           text={phrase}

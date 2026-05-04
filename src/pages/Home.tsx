@@ -1,3 +1,4 @@
+import { motion } from "framer-motion"
 import HeroSectionwithPixelBackground from "@/components/hero"
 import { LaserFlowBoxExample } from "@/components/LaserFlowMain"
 import { Announcement, AnnouncementTag, AnnouncementTitle } from "@/components/ui/announcement"
@@ -6,8 +7,8 @@ import MotionTiles from "@/components/ui/motion-tiles"
 import FAQWithSpiral from "@/components/ui/faq-section"
 import { PerspectiveMarqueeBand } from "@/components/PerspectiveDemo"
 import { SiteFooter } from "@/components/site-footer"
-import { OpeningScramble } from "@/components/opening-scramble"
 import { BentoSection } from "@/components/bento-section"
+import { HeroDemo } from "@/components/lamp"
 
 export const Home = () => {
     return (
@@ -40,10 +41,22 @@ export const Home = () => {
             <br />
             <br />
             <FAQWithSpiral />
-            {/* Command Center Section */}
-            <div id='comando' className='scroll-mt-28'>
-                <OpeningScramble />
+            
+            {/* Visual Bridge / Transition Section */}
+            <div className="flex flex-col items-center py-24 relative overflow-hidden">
+                <div className="h-32 w-px bg-gradient-to-b from-transparent via-zinc-600 to-transparent opacity-50" />
+                <motion.p 
+                    initial={{ opacity: 0, y: 10 }}
+                    whileInView={{ opacity: 0.4, y: 0 }}
+                    transition={{ duration: 1 }}
+                    className="mt-8 text-[9px] md:text-[11px] tracking-[0.6em] uppercase text-zinc-400 font-light text-center px-4"
+                >
+                    Transformando datos en oportunidades estratégicas
+                </motion.p>
+                <div className="mt-8 h-32 w-px bg-gradient-to-b from-transparent via-zinc-600 to-transparent opacity-50" />
             </div>
+
+            <HeroDemo />
             <SiteFooter />
         </div>
     )

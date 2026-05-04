@@ -178,55 +178,58 @@ export const VistaGeneral = () => {
 
       </div>
 
-      {/* Global Ticker Footer - Original Performance CSS Loop */}
-      <div className="relative h-14 rounded-2xl bg-[#080808] border border-white/5 flex items-center overflow-hidden">
-        <div className="absolute left-0 top-0 bottom-0 px-6 bg-[#D4AF37] text-black flex items-center gap-2 z-20 shadow-[10px_0_20px_rgba(0,0,0,0.5)]">
-          <ShieldCheck className="size-4" />
-          <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Verified Feed</span>
+      {/* Global Ticker Footer - HIGH PERFORMANCE CSS ONLY LOOP */}
+      <div className="relative h-10 sm:h-14 rounded-xl sm:rounded-2xl bg-[#080808] border border-white/5 flex items-center overflow-hidden">
+        <div className="absolute left-0 top-0 bottom-0 px-3 sm:px-6 bg-[#D4AF37] text-black flex items-center gap-2 z-20 shadow-[10px_0_20px_rgba(0,0,0,0.5)]">
+          <ShieldCheck className="size-3 sm:size-4" />
+          <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Verified Feed</span>
         </div>
         
-        <div className="flex gap-12 animate-scroll whitespace-nowrap pl-40">
-          {rows.map((row) => (
-            <div key={row.simbolo} className="flex items-center gap-3">
-              <div className="size-4 flex items-center justify-center">
-                <img 
-                  src={`/${row.simbolo === 'AAPL' ? 'Apple Logo.svg' : row.simbolo === 'NVDA' ? 'Nvidia Color Icon.svg' : row.simbolo === 'MSFT' ? 'Microsoft Color Icon.svg' : row.simbolo === 'GOOGL' ? 'Google Logo.svg' : row.simbolo === 'TSLA' ? 'X Logo.svg' : 'fintrendicon.svg'}`} 
-                  alt={row.simbolo}
-                  className="size-full object-contain brightness-0 invert opacity-70"
-                  onError={(e) => { (e.target as HTMLImageElement).src = '/fintrendicon.svg' }}
-                />
+        <div className="flex-1 overflow-hidden">
+          <div className="animate-scroll gap-8 sm:gap-12 pl-4">
+            {/* First Set */}
+            {rows.map((row) => (
+              <div key={`ticker-${row.simbolo}`} className="flex items-center gap-2 sm:gap-3">
+                <div className="size-3 sm:size-4 flex items-center justify-center">
+                  <img 
+                    src={`/${row.simbolo === 'AAPL' ? 'Apple Logo.svg' : row.simbolo === 'NVDA' ? 'Nvidia Color Icon.svg' : row.simbolo === 'MSFT' ? 'Microsoft Color Icon.svg' : row.simbolo === 'GOOGL' ? 'Google Logo.svg' : row.simbolo === 'TSLA' ? 'X Logo.svg' : 'fintrendicon.svg'}`} 
+                    alt={row.simbolo}
+                    className="size-full object-contain brightness-0 invert opacity-70"
+                    onError={(e) => { (e.target as HTMLImageElement).src = '/fintrendicon.svg' }}
+                  />
+                </div>
+                <span className="text-[9px] sm:text-[10px] font-black text-white uppercase">{row.simbolo}</span>
+                <span className="text-[10px] sm:text-xs font-bold tabular-nums text-zinc-400">${row.precio?.toFixed(2) || '---'}</span>
+                <span className={cn(
+                  "text-[9px] sm:text-[10px] font-black",
+                  (row.variacion ?? 0) >= 0 ? "text-emerald-500" : "text-red-500"
+                )}>
+                  {(row.variacion ?? 0) >= 0 ? '+' : ''}{row.variacion?.toFixed(2)}%
+                </span>
               </div>
-              <span className="text-[10px] font-black text-white uppercase">{row.simbolo}</span>
-              <span className="text-xs font-bold tabular-nums text-zinc-400">${row.precio?.toFixed(2) || '---'}</span>
-              <span className={cn(
-                "text-[10px] font-black",
-                (row.variacion ?? 0) >= 0 ? "text-emerald-500" : "text-red-500"
-              )}>
-                {(row.variacion ?? 0) >= 0 ? '+' : ''}{row.variacion?.toFixed(2)}%
-              </span>
-            </div>
-          ))}
-          {/* Duplicate for seamless loop */}
-          {rows.map((row) => (
-            <div key={`${row.simbolo}-dup`} className="flex items-center gap-3">
-              <div className="size-4 flex items-center justify-center">
-                <img 
-                  src={`/${row.simbolo === 'AAPL' ? 'Apple Logo.svg' : row.simbolo === 'NVDA' ? 'Nvidia Color Icon.svg' : row.simbolo === 'MSFT' ? 'Microsoft Color Icon.svg' : row.simbolo === 'GOOGL' ? 'Google Logo.svg' : row.simbolo === 'TSLA' ? 'X Logo.svg' : 'fintrendicon.svg'}`} 
-                  alt={row.simbolo}
-                  className="size-full object-contain brightness-0 invert opacity-70"
-                  onError={(e) => { (e.target as HTMLImageElement).src = '/fintrendicon.svg' }}
-                />
+            ))}
+            {/* Duplicated set for seamless loop */}
+            {rows.map((row) => (
+              <div key={`ticker-dup-${row.simbolo}`} className="flex items-center gap-2 sm:gap-3">
+                <div className="size-3 sm:size-4 flex items-center justify-center">
+                  <img 
+                    src={`/${row.simbolo === 'AAPL' ? 'Apple Logo.svg' : row.simbolo === 'NVDA' ? 'Nvidia Color Icon.svg' : row.simbolo === 'MSFT' ? 'Microsoft Color Icon.svg' : row.simbolo === 'GOOGL' ? 'Google Logo.svg' : row.simbolo === 'TSLA' ? 'X Logo.svg' : 'fintrendicon.svg'}`} 
+                    alt={row.simbolo}
+                    className="size-full object-contain brightness-0 invert opacity-70"
+                    onError={(e) => { (e.target as HTMLImageElement).src = '/fintrendicon.svg' }}
+                  />
+                </div>
+                <span className="text-[9px] sm:text-[10px] font-black text-white uppercase">{row.simbolo}</span>
+                <span className="text-[10px] sm:text-xs font-bold tabular-nums text-zinc-400">${row.precio?.toFixed(2) || '---'}</span>
+                <span className={cn(
+                  "text-[9px] sm:text-[10px] font-black",
+                  (row.variacion ?? 0) >= 0 ? "text-emerald-500" : "text-red-500"
+                )}>
+                  {(row.variacion ?? 0) >= 0 ? '+' : ''}{row.variacion?.toFixed(2)}%
+                </span>
               </div>
-              <span className="text-[10px] font-black text-white uppercase">{row.simbolo}</span>
-              <span className="text-xs font-bold tabular-nums text-zinc-400">${row.precio?.toFixed(2) || '---'}</span>
-              <span className={cn(
-                "text-[10px] font-black",
-                (row.variacion ?? 0) >= 0 ? "text-emerald-500" : "text-red-500"
-              )}>
-                {(row.variacion ?? 0) >= 0 ? '+' : ''}{row.variacion?.toFixed(2)}%
-              </span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
