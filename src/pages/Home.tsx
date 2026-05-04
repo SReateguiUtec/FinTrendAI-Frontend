@@ -41,11 +41,11 @@ export const Home = () => {
             <br />
             <br />
             <FAQWithSpiral />
-            
+
             {/* Visual Bridge / Transition Section */}
             <div className="flex flex-col items-center py-24 relative overflow-hidden">
                 <div className="h-32 w-px bg-gradient-to-b from-transparent via-[#D4AF37]/40 to-transparent opacity-50" />
-                <motion.p 
+                <motion.p
                     initial={{ opacity: 0, y: 10 }}
                     whileInView={{ opacity: 0.6, y: 0 }}
                     transition={{ duration: 1 }}
@@ -55,7 +55,8 @@ export const Home = () => {
                 </motion.p>
                 <div className="mt-8 h-32 w-px bg-gradient-to-b from-transparent via-[#D4AF37]/40 to-transparent opacity-50" />
             </div>
-
+            <br />
+            <br />
             <HeroDemo />
             <SiteFooter />
         </div>

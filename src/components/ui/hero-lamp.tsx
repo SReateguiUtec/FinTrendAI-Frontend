@@ -65,7 +65,7 @@ const Hero = React.forwardRef<HTMLElement, HeroProps>(
 
                     {/* Main glow - CHAMPAGNE GOLD - Optimized */}
                     <div className={cn(
-                        "absolute inset-auto z-50 h-36 -translate-y-[-30%] rounded-full bg-[#D4AF37] opacity-10 blur-3xl transform-gpu will-change-transform", 
+                        "absolute inset-auto z-50 h-36 -translate-y-[-30%] rounded-full bg-[#D4AF37] opacity-10 blur-3xl transform-gpu will-change-transform",
                         isMobile ? "w-[12rem]" : "w-[28rem]"
                     )} />
 
@@ -143,7 +143,7 @@ const Hero = React.forwardRef<HTMLElement, HeroProps>(
                         {subtitle && (
                             <p
                                 className={cn(
-                                    "max-w-2xl text-zinc-500 text-lg md:text-xl transform-gpu mt-3",
+                                    "max-w-2xl text-zinc-500 text-lg md:text-xl transform-gpu mt-6",
                                     subtitleClassName
                                 )}
                             >
@@ -151,13 +151,13 @@ const Hero = React.forwardRef<HTMLElement, HeroProps>(
                             </p>
                         )}
                         {actions && actions.length > 0 && (
-                            <div className={cn("flex flex-wrap items-center justify-center gap-4 mt-8", actionsClassName)}>
+                            <div className={cn("flex flex-wrap items-center justify-center gap-4 mt-14", actionsClassName)}>
                                 {actions.map((action, index) => (
                                     <motion.div key={index} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                                         <Link
                                             to={action.href}
                                             className={cn(
-                                                "group flex items-center justify-center gap-2 rounded-xl bg-[#0a0a0a] border border-white/20 px-6 py-2.5 text-sm font-bold text-white transition-all duration-300 hover:bg-[#D4AF37]/[0.1] hover:border-[#D4AF37] hover:shadow-[0_0_25px_rgba(212,175,55,0.5)] active:scale-95 transform-gpu",
+                                                "group flex items-center justify-center gap-2 rounded-xl bg-[#0a0a0a] border border-white/20 px-6 py-2.5 text-sm font-bold text-white transition-all duration-300 hover:bg-white/5 active:scale-95 transform-gpu",
                                                 isMobile && "px-5 py-2 text-xs"
                                             )}
                                         >

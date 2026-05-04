@@ -11,10 +11,10 @@ export function SiteFooter() {
       />
       <div className='mx-auto flex max-w-6xl flex-col items-center justify-center gap-3 px-6 py-12 sm:flex-row sm:justify-between sm:gap-0'>
         <div className="flex flex-col items-center gap-2 sm:items-start">
-          <p className='font-display text-[12px] font-semibold tracking-[0.4em] text-zinc-500 uppercase'>
+          <p className='hidden sm:block font-display text-[12px] font-semibold tracking-[0.4em] text-zinc-500 uppercase'>
             FinTrend <span className='text-[#D4AF37]'>AI</span>
           </p>
-          <TextScramble 
+          <TextScramble
             text="#Predicelo"
             maskCycle="#Predicelo"
             decodeOnHover
