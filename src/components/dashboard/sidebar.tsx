@@ -53,7 +53,7 @@ function MarketClock() {
     dotColor: string; glowColor: string; countdownLabel: string;
   }> = {
     'pre-market': {
-      label: 'PRE-MARKET',  shortLabel: 'PRE',
+      label: 'PRE-MARKET', shortLabel: 'PRE',
       color: 'text-amber-400', bgColor: 'bg-amber-500/15 border-amber-500/30',
       dotColor: 'bg-amber-400', glowColor: 'shadow-[0_0_8px_rgba(245,158,11,0.5)]',
       countdownLabel: 'Regular abre en',
@@ -82,8 +82,8 @@ function MarketClock() {
 
   let session: MarketSession = 'closed';
   if (!isWeekend) {
-    if (totalMinutes >= 240 && totalMinutes < 570)  session = 'pre-market';
-    else if (totalMinutes >= 570 && totalMinutes < 960)  session = 'regular';
+    if (totalMinutes >= 240 && totalMinutes < 570) session = 'pre-market';
+    else if (totalMinutes >= 570 && totalMinutes < 960) session = 'regular';
     else if (totalMinutes >= 960 && totalMinutes < 1200) session = 'after-hours';
   }
 
@@ -186,10 +186,10 @@ function MarketClock() {
           <div className="flex items-center justify-center gap-2 text-[10px]">
             <span className="text-zinc-500">Horario:</span>
             <span className="text-zinc-300 font-medium">
-              {session === 'pre-market'  && '4:00 – 9:30 AM'}
-              {session === 'regular'     && '9:30 AM – 4:00 PM'}
+              {session === 'pre-market' && '4:00 – 9:30 AM'}
+              {session === 'regular' && '9:30 AM – 4:00 PM'}
               {session === 'after-hours' && '4:00 – 8:00 PM'}
-              {session === 'closed'      && 'Cerrado'}
+              {session === 'closed' && 'Cerrado'}
             </span>
           </div>
 

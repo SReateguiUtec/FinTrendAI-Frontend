@@ -233,7 +233,7 @@ export const Noticias = () => {
   /* Carga inicial: noticias + catálogo */
   useEffect(() => {
     fetchNoticias('');
-    getSimbolos().then(setCatalogo).catch(() => {});
+    getSimbolos().then(setCatalogo).catch(() => { });
   }, [fetchNoticias]);
 
   /* Filtrar sugerencias */
@@ -278,17 +278,12 @@ export const Noticias = () => {
 
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-          <div className="flex items-center gap-2 mb-1">
-            <div className="p-1.5 rounded-lg bg-[#D4AF37]/20 text-[#D4AF37]">
-              <Newspaper className="size-4" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Noticias</h1>
-          </div>
-          <p className="text-zinc-400 text-sm leading-snug">
-            Feed con sentimiento ·{' '}
-            <span className="text-zinc-600">{noticias.length} noticias cargadas</span>
-          </p>
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-4">
+          <div className="w-1.5 h-10 bg-[#D4AF37] rounded-full shadow-[0_0_15px_rgba(212,175,55,0.3)]" />
+          <h1 className="text-3xl font-black tracking-tighter uppercase flex items-baseline">
+            <span className="text-white">Noticias</span>
+            <span className="text-zinc-700 ml-3">Feed</span>
+          </h1>
         </motion.div>
 
         {/* Búsqueda: fila completa en móvil; acciones en segunda fila */}
@@ -301,13 +296,13 @@ export const Noticias = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-zinc-500 z-10" />
             <input
               type="text"
-              placeholder="Filtrar por símbolo…"
+              placeholder="FILTRAR POR SÍMBOLO…"
               value={busquedaSimbolo}
               onChange={e => { setBusquedaSimbolo(e.target.value.toUpperCase()); setShowSugerencias(true); }}
               onFocus={() => setShowSugerencias(true)}
               onBlur={() => setTimeout(() => setShowSugerencias(false), 150)}
               onKeyDown={e => e.key === 'Enter' && handleBuscar()}
-              className="w-full min-w-0 bg-white/5 border border-white/10 rounded-xl py-2 pl-9 pr-4 text-sm focus:outline-none focus:border-[#D4AF37]/50 placeholder:text-zinc-600 transition-all"
+              className="w-full min-w-0 bg-transparent border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-[10px] text-white uppercase tracking-widest focus:outline-none focus:border-white/20 placeholder:text-zinc-600 transition-all"
             />
 
             {/* Sugerencias */}
@@ -339,7 +334,7 @@ export const Noticias = () => {
             <button
               type="button"
               onClick={handleBuscar}
-              className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-sm font-bold hover:bg-[#D4AF37]/20 transition-all"
+              className="flex-1 sm:flex-none px-5 py-2.5 rounded-lg bg-transparent border border-white/10 text-white text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-white/5 transition-all"
             >
               Buscar
             </button>
@@ -359,31 +354,31 @@ export const Noticias = () => {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap">
         <span className="text-xs text-zinc-600 font-bold uppercase tracking-wider shrink-0">Símbolo</span>
         <div className="flex flex-wrap items-center gap-2">
-        <button
-          onClick={() => { setBusquedaSimbolo(''); setSimboloActivo(''); fetchNoticias(''); }}
-          className={cn(
-            'px-3 py-1.5 rounded-full text-xs font-bold transition-all border',
-            simboloActivo === ''
-              ? 'bg-[#D4AF37]/10 border-[#D4AF37]/30 text-[#D4AF37]'
-              : 'bg-white/5 border-white/10 text-zinc-500 hover:text-white hover:border-white/20'
-          )}
-        >
-          Todos
-        </button>
-        {SIMBOLOS_RAPIDOS.map(s => (
           <button
-            key={s}
-            onClick={() => { setBusquedaSimbolo(s); setSimboloActivo(s); fetchNoticias(s); }}
+            onClick={() => { setBusquedaSimbolo(''); setSimboloActivo(''); fetchNoticias(''); }}
             className={cn(
-              'px-3 py-1.5 rounded-full text-xs font-bold transition-all border',
-              simboloActivo === s
-                ? 'bg-[#D4AF37]/10 border-[#D4AF37]/30 text-[#D4AF37]'
-                : 'bg-white/5 border-white/10 text-zinc-500 hover:text-white hover:border-white/20'
+              'px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-[0.2em] transition-all border',
+              simboloActivo === ''
+                ? 'bg-white/10 border-white/20 text-white'
+                : 'bg-transparent border-white/10 text-zinc-500 hover:text-white hover:border-white/20'
             )}
           >
-            {s}
+            Todos
           </button>
-        ))}
+          {SIMBOLOS_RAPIDOS.map(s => (
+            <button
+              key={s}
+              onClick={() => { setBusquedaSimbolo(s); setSimboloActivo(s); fetchNoticias(s); }}
+              className={cn(
+                'px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-[0.2em] transition-all border',
+                simboloActivo === s
+                  ? 'bg-white/10 border-white/20 text-white'
+                  : 'bg-transparent border-white/10 text-zinc-500 hover:text-white hover:border-white/20'
+              )}
+            >
+              {s}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -421,21 +416,21 @@ export const Noticias = () => {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center pt-1">
         <span className="text-xs text-zinc-600 font-bold uppercase tracking-wider shrink-0">Filtrar</span>
         <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-2">
-        {FILTROS.map(f => (
-          <button
-            key={f}
-            type="button"
-            onClick={() => setFiltroSentimiento(f)}
-            className={cn(
-              'px-3 py-2 sm:py-1.5 rounded-full text-xs font-bold transition-all border text-center sm:text-left',
-              filtroSentimiento === f
-                ? 'bg-[#D4AF37]/10 border-[#D4AF37]/30 text-[#D4AF37]'
-                : 'bg-white/5 border-white/10 text-zinc-500 hover:text-white hover:border-white/20'
-            )}
-          >
-            {f}
-          </button>
-        ))}
+          {FILTROS.map(f => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFiltroSentimiento(f)}
+              className={cn(
+                'px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-[0.2em] transition-all border text-center',
+                filtroSentimiento === f
+                  ? 'bg-white/10 border-white/20 text-white'
+                  : 'bg-transparent border-white/10 text-zinc-500 hover:text-white hover:border-white/20'
+              )}
+            >
+              {f}
+            </button>
+          ))}
         </div>
       </div>
 

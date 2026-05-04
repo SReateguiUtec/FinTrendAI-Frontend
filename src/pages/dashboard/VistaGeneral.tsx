@@ -65,19 +65,76 @@ export const VistaGeneral = () => {
 
   return (
     <div className="p-4 sm:p-8 space-y-8 max-w-[1600px] mx-auto">
-      
+
+      {/* Global Ticker Header - HIGH PERFORMANCE CSS ONLY LOOP */}
+      <div className="relative h-8 sm:h-14 rounded-lg sm:rounded-2xl bg-[#080808] border border-white/5 flex items-center overflow-hidden mb-6 sm:mb-8 shadow-2xl">
+        <div className="absolute left-0 top-0 bottom-0 px-2 sm:px-6 bg-[#D4AF37] text-black flex items-center gap-1.5 sm:gap-2 z-20 shadow-[10px_0_20px_rgba(0,0,0,0.5)]">
+          <ShieldCheck className="size-2.5 sm:size-4" />
+          <span className="text-[7px] sm:text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Verified Feed</span>
+        </div>
+
+        <div className="flex-1 overflow-hidden">
+          <div className="animate-scroll gap-6 sm:gap-12 pl-4">
+            {/* First Set */}
+            {rows.map((row) => (
+              <div key={`ticker-${row.simbolo}`} className="flex items-center gap-2 sm:gap-3">
+                <div className="size-2.5 sm:size-4 flex items-center justify-center">
+                  <img
+                    src={`/${row.simbolo === 'AAPL' ? 'Apple Logo.svg' : row.simbolo === 'NVDA' ? 'Nvidia Color Icon.svg' : row.simbolo === 'MSFT' ? 'Microsoft Color Icon.svg' : row.simbolo === 'GOOGL' ? 'Google Logo.svg' : row.simbolo === 'TSLA' ? 'X Logo.svg' : 'fintrendicon.svg'}`}
+                    alt={row.simbolo}
+                    className="size-full object-contain brightness-0 invert opacity-70"
+                    onError={(e) => { (e.target as HTMLImageElement).src = '/fintrendicon.svg' }}
+                  />
+                </div>
+                <span className="text-[8px] sm:text-[10px] font-black text-white uppercase">{row.simbolo}</span>
+                <span className="text-[9px] sm:text-xs font-bold tabular-nums text-zinc-400">${row.precio?.toFixed(2) || '---'}</span>
+                <span className={cn(
+                  "text-[8px] sm:text-[10px] font-black",
+                  (row.variacion ?? 0) >= 0 ? "text-emerald-500" : "text-red-500"
+                )}>
+                  {(row.variacion ?? 0) >= 0 ? '+' : ''}{row.variacion?.toFixed(2)}%
+                </span>
+              </div>
+            ))}
+            {/* Duplicated set for seamless loop */}
+            {rows.map((row) => (
+              <div key={`ticker-dup-${row.simbolo}`} className="flex items-center gap-2 sm:gap-3">
+                <div className="size-2.5 sm:size-4 flex items-center justify-center">
+                  <img
+                    src={`/${row.simbolo === 'AAPL' ? 'Apple Logo.svg' : row.simbolo === 'NVDA' ? 'Nvidia Color Icon.svg' : row.simbolo === 'MSFT' ? 'Microsoft Color Icon.svg' : row.simbolo === 'GOOGL' ? 'Google Logo.svg' : row.simbolo === 'TSLA' ? 'X Logo.svg' : 'fintrendicon.svg'}`}
+                    alt={row.simbolo}
+                    className="size-full object-contain brightness-0 invert opacity-70"
+                    onError={(e) => { (e.target as HTMLImageElement).src = '/fintrendicon.svg' }}
+                  />
+                </div>
+                <span className="text-[8px] sm:text-[10px] font-black text-white uppercase">{row.simbolo}</span>
+                <span className="text-[9px] sm:text-xs font-bold tabular-nums text-zinc-400">${row.precio?.toFixed(2) || '---'}</span>
+                <span className={cn(
+                  "text-[8px] sm:text-[10px] font-black",
+                  (row.variacion ?? 0) >= 0 ? "text-emerald-500" : "text-red-500"
+                )}>
+                  {(row.variacion ?? 0) >= 0 ? '+' : ''}{row.variacion?.toFixed(2)}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Premium Header HUD */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-white/5 pb-8">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6 border-b border-white/5 pb-6 sm:pb-8">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-1 bg-[#D4AF37] rounded-full shadow-[0_0_15px_rgba(212,175,55,0.5)]" />
+            <div className="h-6 sm:h-8 w-1 bg-[#D4AF37] rounded-full shadow-[0_0_15px_rgba(212,175,55,0.5)]" />
             <motion.h1
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="text-2xl sm:text-4xl font-black tracking-tighter text-white uppercase flex items-center gap-3"
+              className="text-xl sm:text-4xl font-black tracking-tighter text-white uppercase flex items-center gap-2 sm:gap-3 flex-nowrap"
             >
               Intelligence <span className="text-zinc-500 font-light">Hub</span>
-              <span className="text-[10px] sm:text-xs bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/20 px-2 py-0.5 rounded-full font-bold tracking-widest ml-2">DEMO</span>
+              <span className="px-2.5 sm:px-3 py-2 rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/5 text-[#D4AF37] text-[7px] sm:text-[9px] font-black tracking-[0.2em] uppercase ml-1 shadow-[0_0_10px_rgba(212,175,55,0.1)] leading-none">
+                DEMO
+              </span>
             </motion.h1>
           </div>
           <motion.p
@@ -89,7 +146,7 @@ export const VistaGeneral = () => {
             Terminal Operativa · Sistema de Análisis Global
           </motion.p>
         </div>
-        
+
         <div className="flex items-center gap-4">
           <div className="hidden sm:flex flex-col items-end px-4 border-r border-white/10">
             <span className="text-[10px] text-zinc-600 font-black uppercase tracking-widest">Status Sistema</span>
@@ -109,10 +166,10 @@ export const VistaGeneral = () => {
 
       {/* Main Bento Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-        
+
         {/* Left Stats Column */}
         <div className="xl:col-span-1 grid grid-cols-3 xl:grid-cols-1 gap-3 xl:gap-0 xl:space-y-6">
-           <StatCard
+          <StatCard
             label="Activos en Red"
             value={cantidadSimbolosActivos === null ? '...' : String(cantidadSimbolosActivos)}
             change="Empresas"
@@ -141,15 +198,15 @@ export const VistaGeneral = () => {
         {/* Central Immersive Core (Globe with specialized UI) */}
         <div className="xl:col-span-2 relative min-h-[500px] rounded-[2.5rem] bg-gradient-to-b from-white/[0.03] to-transparent border border-white/5 overflow-hidden flex flex-col items-center justify-center group shadow-2xl">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(212,175,55,0.05)_0%,_transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-          
+
           <div className="absolute top-8 left-8 flex items-center gap-3 z-20">
-             <div className="p-2 rounded-xl bg-white/5 border border-white/10">
-               <Globe className="size-4 text-[#D4AF37]" />
-             </div>
-             <div>
-               <h3 className="text-sm font-black text-white uppercase tracking-widest">Global Market Pulse</h3>
-               <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-tighter">Visualización Geográfica de Flujos</p>
-             </div>
+            <div className="p-2 rounded-xl bg-white/5 border border-white/10">
+              <Globe className="size-4 text-[#D4AF37]" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-white uppercase tracking-widest">Global Market Pulse</h3>
+              <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-tighter">Visualización Geográfica de Flujos</p>
+            </div>
           </div>
 
           <div className="w-full relative z-10">
@@ -157,17 +214,17 @@ export const VistaGeneral = () => {
           </div>
 
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-6 px-8 py-4 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/5 z-20">
-             <div className="flex items-center gap-3">
-               <div className="size-2 rounded-full bg-emerald-500 animate-ping" />
-               <span className="text-[10px] font-black text-white uppercase tracking-widest">Transacciones Live</span>
-             </div>
-             <div className="h-4 w-px bg-white/10" />
-             <div className="flex items-center gap-2">
-               <span className="text-[10px] font-bold text-zinc-500 uppercase">Volumen 24h</span>
-               <span className="text-xs font-black text-white tabular-nums">
-                 {loading ? '...' : totalVol >= 1_000_000 ? `${(totalVol / 1_000_000).toFixed(1)}M` : totalVol.toLocaleString()}
-               </span>
-             </div>
+            <div className="flex items-center gap-3">
+              <div className="size-2 rounded-full bg-emerald-500 animate-ping" />
+              <span className="text-[10px] font-black text-white uppercase tracking-widest">Transacciones Live</span>
+            </div>
+            <div className="h-4 w-px bg-white/10" />
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-zinc-500 uppercase">Volumen 24h</span>
+              <span className="text-xs font-black text-white tabular-nums">
+                {loading ? '...' : totalVol >= 1_000_000 ? `${(totalVol / 1_000_000).toFixed(1)}M` : totalVol.toLocaleString()}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -177,62 +234,6 @@ export const VistaGeneral = () => {
         </div>
 
       </div>
-
-      {/* Global Ticker Footer - HIGH PERFORMANCE CSS ONLY LOOP */}
-      <div className="relative h-10 sm:h-14 rounded-xl sm:rounded-2xl bg-[#080808] border border-white/5 flex items-center overflow-hidden">
-        <div className="absolute left-0 top-0 bottom-0 px-3 sm:px-6 bg-[#D4AF37] text-black flex items-center gap-2 z-20 shadow-[10px_0_20px_rgba(0,0,0,0.5)]">
-          <ShieldCheck className="size-3 sm:size-4" />
-          <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Verified Feed</span>
-        </div>
-        
-        <div className="flex-1 overflow-hidden">
-          <div className="animate-scroll gap-8 sm:gap-12 pl-4">
-            {/* First Set */}
-            {rows.map((row) => (
-              <div key={`ticker-${row.simbolo}`} className="flex items-center gap-2 sm:gap-3">
-                <div className="size-3 sm:size-4 flex items-center justify-center">
-                  <img 
-                    src={`/${row.simbolo === 'AAPL' ? 'Apple Logo.svg' : row.simbolo === 'NVDA' ? 'Nvidia Color Icon.svg' : row.simbolo === 'MSFT' ? 'Microsoft Color Icon.svg' : row.simbolo === 'GOOGL' ? 'Google Logo.svg' : row.simbolo === 'TSLA' ? 'X Logo.svg' : 'fintrendicon.svg'}`} 
-                    alt={row.simbolo}
-                    className="size-full object-contain brightness-0 invert opacity-70"
-                    onError={(e) => { (e.target as HTMLImageElement).src = '/fintrendicon.svg' }}
-                  />
-                </div>
-                <span className="text-[9px] sm:text-[10px] font-black text-white uppercase">{row.simbolo}</span>
-                <span className="text-[10px] sm:text-xs font-bold tabular-nums text-zinc-400">${row.precio?.toFixed(2) || '---'}</span>
-                <span className={cn(
-                  "text-[9px] sm:text-[10px] font-black",
-                  (row.variacion ?? 0) >= 0 ? "text-emerald-500" : "text-red-500"
-                )}>
-                  {(row.variacion ?? 0) >= 0 ? '+' : ''}{row.variacion?.toFixed(2)}%
-                </span>
-              </div>
-            ))}
-            {/* Duplicated set for seamless loop */}
-            {rows.map((row) => (
-              <div key={`ticker-dup-${row.simbolo}`} className="flex items-center gap-2 sm:gap-3">
-                <div className="size-3 sm:size-4 flex items-center justify-center">
-                  <img 
-                    src={`/${row.simbolo === 'AAPL' ? 'Apple Logo.svg' : row.simbolo === 'NVDA' ? 'Nvidia Color Icon.svg' : row.simbolo === 'MSFT' ? 'Microsoft Color Icon.svg' : row.simbolo === 'GOOGL' ? 'Google Logo.svg' : row.simbolo === 'TSLA' ? 'X Logo.svg' : 'fintrendicon.svg'}`} 
-                    alt={row.simbolo}
-                    className="size-full object-contain brightness-0 invert opacity-70"
-                    onError={(e) => { (e.target as HTMLImageElement).src = '/fintrendicon.svg' }}
-                  />
-                </div>
-                <span className="text-[9px] sm:text-[10px] font-black text-white uppercase">{row.simbolo}</span>
-                <span className="text-[10px] sm:text-xs font-bold tabular-nums text-zinc-400">${row.precio?.toFixed(2) || '---'}</span>
-                <span className={cn(
-                  "text-[9px] sm:text-[10px] font-black",
-                  (row.variacion ?? 0) >= 0 ? "text-emerald-500" : "text-red-500"
-                )}>
-                  {(row.variacion ?? 0) >= 0 ? '+' : ''}{row.variacion?.toFixed(2)}%
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
     </div>
   );
 };

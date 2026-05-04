@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LineChart, Plus, Star, Trash2, Search,
   ChevronRight, BookOpen, AlertCircle, CheckCircle2, XCircle, X,
-  ChevronLeft, TrendingUp, Activity,
+  ChevronLeft, TrendingUp, Activity, Clock, MessageCircle,
+  TrendingDown, Minus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -11,11 +12,45 @@ import {
   addFavorito, removeFavorito, deletePortafolio,
   type Portafolio, type Favorito,
 } from '@/services/portafolio';
+import { getNoticiasPorSimbolo } from '@/services/noticias';
 import {
   getUltimoPrecio, getPrecios, getPreciosRango, getSimbolos,
   type PrecioAccion, type Simbolo,
 } from '@/services/precios';
 import { ChartHistorial } from '@/components/chart-historial';
+
+/* ── Noticias Helpers ─────────────────────────────────────── */
+const sentimientoConfig = {
+  Bullish: { color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30', Icon: TrendingUp },
+  Bearish: { color: 'text-red-400 bg-red-500/10 border-red-500/30', Icon: TrendingDown },
+  Neutral: { color: 'text-zinc-400 bg-white/5 border-white/10', Icon: Minus },
+} as const;
+
+const SentimientoBadge = ({ tipo }: { tipo: string }) => {
+  const config = sentimientoConfig[tipo as keyof typeof sentimientoConfig] || sentimientoConfig.Neutral;
+  const { color, Icon } = config;
+  return (
+    <span className={cn('flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-bold', color)}>
+      <Icon className="size-2.5" />
+      {tipo}
+    </span>
+  );
+};
+
+function timeAgo(iso: string) {
+  const t = Date.now() - new Date(iso).getTime();
+  const s = Math.max(0, Math.floor(t / 1000));
+  if (s < 60) return 'ahora';
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  if (s < 84000) return `${Math.floor(s / 3600)}h`;
+  return new Date(iso).toLocaleDateString();
+}
+
+function iniciales(texto: string) {
+  const t = (texto || '').trim();
+  if (!t) return 'FT';
+  return t.slice(0, 2).toUpperCase();
+}
 
 /* ── Skeleton ─────────────────────────────────────────────── */
 const Skeleton = ({ className }: { className?: string }) => (
@@ -90,6 +125,10 @@ export const Seguimiento = () => {
   const [precios, setPrecios] = useState<Record<string, PrecioAccion | null>>({});
   const [sparklines, setSparklines] = useState<Record<string, number[]>>({});
   const [loadingFav, setLoadingFav] = useState(false);
+  const [noticiasPf, setNoticiasPf] = useState<any[]>([]);
+  const [loadingNoticias, setLoadingNoticias] = useState(false);
+  const [paginaNoticias, setPaginaNoticias] = useState(0);
+  const NOTICIAS_PF_POR_PAGINA = 2;
 
   /* Catálogo de símbolos válidos */
   const [catalogo, setCatalogo] = useState<Simbolo[]>([]);
@@ -108,10 +147,10 @@ export const Seguimiento = () => {
   const [totalPfServer, setTotalPfServer] = useState(0);
   const [totalPaginasPf, setTotalPaginasPf] = useState(1);
   const PF_POR_PAGINA = 5;
+  const FAV_POR_PAGINA = 5;
 
   /* Paginación de favoritos (watchlist) */
   const [paginaFav, setPaginaFav] = useState(0);
-  const FAV_POR_PAGINA = 7;
 
   /* Gráfico de precios */
   const [simboloGrafico, setSimboloGrafico] = useState<string | null>(null);
@@ -133,10 +172,11 @@ export const Seguimiento = () => {
   const [creando, setCreando] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
+  const [vistaActiva, setVistaActiva] = useState<'watchlist' | 'noticias' | 'senales'>('watchlist');
 
   /* ── Carga inicial: catálogo de símbolos (una sola vez) ── */
   useEffect(() => {
-    getSimbolos().then(setCatalogo).catch(() => {});
+    getSimbolos().then(setCatalogo).catch(() => { });
   }, []);
 
   /* ── Debounce de búsqueda de portafolios (300 ms) ── */
@@ -178,7 +218,7 @@ export const Seguimiento = () => {
 
   useEffect(() => {
     fetchPortafolios(paginaPf, busquedaPfDebounced);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paginaPf, busquedaPfDebounced]);
 
   /* Portafolios ya vienen paginados del servidor */
@@ -250,8 +290,37 @@ export const Seguimiento = () => {
       setPrecios(prev => ({ ...prev, ...pm }));
       setSparklines(prev => ({ ...prev, ...sm }));
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paginaFav, favoritos]);
+
+  /* ── Cargar noticias relacionadas al portafolio ── */
+  useEffect(() => {
+    if (favoritos.length === 0) {
+      setNoticiasPf([]);
+      return;
+    }
+    setLoadingNoticias(true);
+
+    (async () => {
+      try {
+        // Obtenemos noticias para cada símbolo del portafolio (máximo los primeros 3 para no saturar)
+        const simbolos = favoritos.slice(0, 3).map(f => f.simbolo);
+        const promesas = simbolos.map(s => getNoticiasPorSimbolo(s).catch(() => []));
+        const resultados = await Promise.all(promesas);
+
+        // Aplanamos y ordenamos por fecha (descendente)
+        const todas = resultados.flat().sort((a, b) =>
+          new Date(b.fechaPublicacion || b.fecha).getTime() - new Date(a.fechaPublicacion || a.fecha).getTime()
+        );
+
+        setNoticiasPf(todas.slice(0, 6)); // Mostramos las 6 más recientes
+      } catch {
+        setNoticiasPf([]);
+      } finally {
+        setLoadingNoticias(false);
+      }
+    })();
+  }, [favoritos]);
 
   /* ── Cargar datos del gráfico: rango con getPreciosRango; fallback a getPrecios + filtro ── */
   useEffect(() => {
@@ -420,19 +489,12 @@ export const Seguimiento = () => {
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-          <div className="flex items-center gap-2 mb-1">
-            <div className="p-1.5 rounded-lg bg-[#D4AF37]/20 text-[#D4AF37]">
-              <LineChart className="size-4" />
-            </div>
-            <h1 className="text-3xl font-bold tracking-tight">Seguimiento</h1>
-          </div>
-          <p className="text-zinc-400 text-sm">
-            Portafolios y favoritos ·{' '}
-            <span className="text-zinc-600">
-              {catalogo.length} símbolos disponibles en el catálogo
-            </span>
-          </p>
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-4">
+          <div className="w-1.5 h-10 bg-[#D4AF37] rounded-full shadow-[0_0_15px_rgba(212,175,55,0.3)]" />
+          <h1 className="text-3xl font-black tracking-tighter flex items-baseline">
+            <span className="text-white">Seguimiento</span>
+            <span className="text-zinc-700 ml-3 font-bold">Portafolios</span>
+          </h1>
         </motion.div>
       </div>
 
@@ -449,7 +511,7 @@ export const Seguimiento = () => {
         <div className="lg:col-span-1 space-y-3">
           {/* Cabecera con contador */}
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-xs text-zinc-500 uppercase font-bold tracking-widest">Portafolios</h2>
+            <h2 className="text-xs text-zinc-500 font-bold tracking-widest">Portafolios</h2>
             {portafolios.length > 0 && (
               <span className="text-[10px] text-zinc-600 font-bold">
                 {pfFiltradosTotal} en total
@@ -458,7 +520,7 @@ export const Seguimiento = () => {
           </div>
 
           {/* Buscador de portafolios */}
-          {portafolios.length > 0 && (
+          {(totalPfServer > 0 || busquedaPf) && (
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-zinc-500" />
               <input
@@ -466,7 +528,7 @@ export const Seguimiento = () => {
                 placeholder="Buscar por nombre…"
                 value={busquedaPf}
                 onChange={e => setBusquedaPf(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-9 pr-3 text-xs focus:outline-none focus:border-[#D4AF37]/50 placeholder:text-zinc-600 transition-all"
+                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-9 pr-3 text-xs focus:outline-none focus:border-[#D4AF37]/50 placeholder:text-zinc-600 transition-all"
               />
               {busquedaPf && (
                 <button
@@ -503,9 +565,9 @@ export const Seguimiento = () => {
                   <button
                     onClick={() => setPortafolioSel(p)}
                     className={cn(
-                      'w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all',
+                      'w-full flex items-center justify-between p-3.5 rounded-xl border text-left transition-all',
                       /* Solo dejar espacio para el botón borrar si NO es default */
-                      !defaultPfIds.has(p.id) && 'pr-9',
+                      !defaultPfIds.has(p.id) && 'pr-11',
                       portafolioSel?.id === p.id
                         ? 'bg-[#D4AF37]/10 border-[#D4AF37]/30 text-[#D4AF37]'
                         : 'bg-white/[0.03] border-white/5 text-white hover:border-white/10'
@@ -555,24 +617,24 @@ export const Seguimiento = () => {
               <button
                 onClick={() => setPaginaPf(p => Math.max(0, p - 1))}
                 disabled={paginaPf === 0}
-                className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                className="p-1.5 rounded-lg bg-white/[0.03] border border-white/10 text-zinc-500 hover:text-white hover:bg-white/[0.08] transition-all disabled:opacity-20 disabled:cursor-not-allowed"
               >
                 <ChevronLeft className="size-3.5" />
               </button>
 
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 {getPaginationRange(paginaPf, totalPaginasPf).map((p, i) => (
                   <React.Fragment key={i}>
                     {p === '...' ? (
-                      <span className="px-1 text-[10px] text-zinc-600">...</span>
+                      <span className="px-1 text-[10px] text-zinc-700 font-black">···</span>
                     ) : (
                       <button
                         onClick={() => setPaginaPf(p as number)}
                         className={cn(
-                          'size-5 rounded-md text-[9px] font-bold transition-all',
+                          'size-5 rounded-md text-[9px] font-black transition-all border uppercase tracking-tighter',
                           paginaPf === p
-                            ? 'bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/30'
-                            : 'bg-white/5 text-zinc-600 hover:text-white'
+                            ? 'bg-white/10 border-white/20 text-white shadow-sm'
+                            : 'bg-transparent border-transparent text-zinc-600 hover:text-zinc-400'
                         )}
                       >
                         {(p as number) + 1}
@@ -585,7 +647,7 @@ export const Seguimiento = () => {
               <button
                 onClick={() => setPaginaPf(p => Math.min(totalPaginasPf - 1, p + 1))}
                 disabled={paginaPf === totalPaginasPf - 1}
-                className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                className="p-1.5 rounded-lg bg-white/[0.03] border border-white/10 text-zinc-500 hover:text-white hover:bg-white/[0.08] transition-all disabled:opacity-20 disabled:cursor-not-allowed"
               >
                 <ChevronRight className="size-3.5" />
               </button>
@@ -596,340 +658,517 @@ export const Seguimiento = () => {
           <div className="pt-2 space-y-2">
             <input
               type="text"
-              placeholder="Nombre del portafolio"
+              placeholder="NOMBRE DEL PORTAFOLIO..."
               value={nuevoNombre}
-              onChange={e => setNuevoNombre(e.target.value)}
+              onChange={e => setNuevoNombre(e.target.value.toUpperCase())}
               onKeyDown={e => e.key === 'Enter' && handleCrear()}
-              className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs focus:outline-none focus:border-[#D4AF37]/50 placeholder:text-zinc-600 transition-all"
+              className="w-full bg-[#0a0a0a] border border-white/5 rounded-xl py-3 px-4 text-[10px] font-black tracking-widest uppercase focus:outline-none focus:border-white/20 placeholder:text-zinc-800 transition-all shadow-inner"
             />
             <button
               onClick={handleCrear}
               disabled={creando || !nuevoNombre.trim()}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-xs font-bold hover:bg-[#D4AF37]/20 transition-all disabled:opacity-40"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/10 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white hover:bg-white/[0.08] transition-all disabled:opacity-20 shadow-sm"
             >
               <Plus className="size-3.5" />
-              {creando ? 'Creando…' : 'Crear portafolio'}
+              {creando ? 'CREANDO…' : 'CREAR PORTAFOLIO'}
             </button>
           </div>
         </div>
 
 
-        {/* ── Panel derecho: Watchlist ── */}
-        <div className="lg:col-span-3 space-y-4">
+        {/* ── Panel derecho: Terminal Multipropósito ── */}
+        <div className="lg:col-span-3 space-y-6">
 
-          {/* Buscador con validación */}
-          {portafolioSel && (
-            <div className="space-y-1.5">
-              <div className="flex flex-col sm:flex-row gap-3">
-                {/* Input con dropdown */}
-                <div className="relative flex-1 min-w-0">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-500 z-10" />
-                  <input
-                    type="text"
-                    placeholder="Buscar símbolo del catálogo (ej. AAPL, TSLA…)"
-                    value={busqueda}
-                    onChange={e => { setBusqueda(e.target.value.toUpperCase()); setShowSugerencias(true); }}
-                    onFocus={() => setShowSugerencias(true)}
-                    onBlur={() => setTimeout(() => setShowSugerencias(false), 150)}
-                    onKeyDown={e => e.key === 'Enter' && handleAgregar()}
-                    className={cn(
-                      'w-full bg-white/5 border rounded-xl py-2.5 pl-10 pr-10 text-sm focus:outline-none placeholder:text-zinc-600 transition-all',
-                      validacion === 'ok' && 'border-emerald-500/40 focus:border-emerald-500/60',
-                      validacion === 'error' && 'border-red-500/40 focus:border-red-500/60',
-                      validacion === 'idle' && 'border-white/10 focus:border-[#D4AF37]/50',
-                    )}
-                  />
-                  {/* Icono de validación dentro del input */}
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <ValidationIcon />
-                  </div>
-
-                  {/* Dropdown de sugerencias */}
-                  <AnimatePresence>
-                    {showSugerencias && sugerencias.length > 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -4 }}
-                        className="absolute top-full mt-1 left-0 right-0 z-50 bg-[#111] border border-white/10 rounded-xl overflow-hidden shadow-xl"
-                      >
-                        {sugerencias.map(s => (
-                          <button
-                            key={s.simbolo}
-                            onMouseDown={() => seleccionarSugerencia(s)}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors text-left"
-                          >
-                            <div className="size-7 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-bold text-zinc-300 shrink-0">
-                              {s.simbolo.substring(0, 2)}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-bold text-white">{s.simbolo}</p>
-                              <p className="text-[10px] text-zinc-500 truncate">{s.nombre}</p>
-                            </div>
-                            {s.sector && (
-                              <span className="ml-auto text-[9px] text-zinc-600 uppercase font-bold tracking-wide shrink-0">
-                                {s.sector}
-                              </span>
-                            )}
-                          </button>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                {/* Botón agregar */}
-                <button
-                  onClick={handleAgregar}
-                  disabled={validacion !== 'ok'}
-                  className="w-full sm:w-auto shrink-0 justify-center px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm font-bold text-zinc-400 hover:text-white hover:border-white/20 transition-all flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <Plus className="size-4" />
-                  Agregar
-                </button>
-              </div>
-
-              {/* Mensaje de validación */}
-              {msgValidacion && (
-                <p className={cn(
-                  'text-xs pl-1 flex items-center gap-1.5',
-                  validacion === 'ok' && 'text-emerald-400',
-                  validacion === 'error' && 'text-red-400',
-                )}>
-                  {msgValidacion}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Tabla watchlist — móvil: tarjetas; sm+: tabla */}
-          <div className="rounded-2xl bg-white/[0.02] border border-white/5 overflow-hidden">
-            {/* Cabecera móvil — columnas alineadas con la nueva fila compacta */}
-            <div className="sm:hidden flex items-center gap-3 px-4 py-2.5 border-b border-white/5 text-[9px] uppercase font-bold tracking-wider text-zinc-600">
-              <div className="size-8 shrink-0" aria-hidden />
-              <span className="flex-1">Símbolo</span>
-              <span className="w-[80px] shrink-0 text-right">Tendencia</span>
-              <span className="w-[72px] shrink-0 text-right">Precio · Var.</span>
-              <div className="w-[26px] shrink-0" aria-hidden />
-            </div>
-            {/* Cabecera escritorio — flex: izquierda flexible, métricas agrupadas a la derecha */}
-            <div className="hidden sm:flex items-center gap-4 px-5 py-3 text-[10px] uppercase font-bold tracking-widest text-zinc-600 border-b border-white/5">
-              <span className="min-w-0 flex-1">Símbolo / Empresa</span>
-              <div className="flex shrink-0 items-center gap-5">
-                <span className="w-[5.5rem] text-right">Último precio</span>
-                <span className="w-[5.5rem] text-right">Tendencia</span>
-                <span className="w-8 shrink-0" aria-hidden />
-              </div>
-            </div>
-
-            {!portafolioSel ? (
-              <div className="flex flex-col items-center justify-center gap-3 py-16">
-                <BookOpen className="size-8 text-zinc-800" />
-                <p className="text-sm text-zinc-600">Selecciona un portafolio para ver sus símbolos</p>
-              </div>
-            ) : loadingFav ? (
-              <div className="px-4 sm:px-5 py-4 space-y-4">
-                {[...Array(4)].map((_, i) => (
-                  <React.Fragment key={i}>
-                    <div className="sm:hidden space-y-3 py-1">
-                      <div className="flex justify-between gap-2">
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                          <Skeleton className="size-9 rounded-xl shrink-0" />
-                          <div className="space-y-1.5 min-w-0 flex-1">
-                            <Skeleton className="h-3 w-16" />
-                            <Skeleton className="h-2 w-32" />
-                          </div>
-                        </div>
-                        <Skeleton className="size-8 rounded-lg shrink-0" />
-                      </div>
-                      <div className="flex justify-between items-end pl-1">
-                        <Skeleton className="h-5 w-24" />
-                        <Skeleton className="h-8 w-28" />
-                      </div>
-                    </div>
-                    <div className="hidden sm:flex items-center gap-4 py-3">
-                      <div className="flex flex-1 items-center gap-3 min-w-0">
-                        <Skeleton className="size-9 rounded-xl shrink-0" />
-                        <div className="space-y-1.5 min-w-0 flex-1">
-                          <Skeleton className="h-3 w-14" />
-                          <Skeleton className="h-2 w-40 max-w-full" />
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-5">
-                        <Skeleton className="h-3 w-16" />
-                        <Skeleton className="h-6 w-20" />
-                        <Skeleton className="size-7 rounded-lg" />
-                      </div>
-                    </div>
-                  </React.Fragment>
-                ))}
-              </div>
-            ) : favoritos.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-3 py-16">
-                <Star className="size-8 text-zinc-800" />
-                <p className="text-sm text-zinc-600 text-center leading-relaxed">
-                  Busca un símbolo del catálogo y agrégalo
-                </p>
-              </div>
-            ) : (
-              <AnimatePresence mode="popLayout">
-                {favPagina.map((fav, i) => {
-                  const p = precios[fav.simbolo];
-                  const { pct, isUp } = variacion(p);
-                  const spark = sparklines[fav.simbolo] ?? [];
-                  const canDelete = !portafolioSel || !defaultPfIds.has(portafolioSel.id);
-                  const sectorCat = catalogo.find(c => c.simbolo === fav.simbolo)?.sector;
-                  return (
-                    <React.Fragment key={fav.id}>
-                      {/* Móvil: fila compacta en una línea */}
-                      <motion.div
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        transition={{ delay: i * 0.04 }}
-                        className="sm:hidden flex items-center gap-3 px-4 py-3 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors"
-                      >
-                        {/* Avatar */}
-                        <div className="size-8 rounded-lg bg-[#0a0a0a] border border-white/10 flex items-center justify-center font-bold text-[9px] text-zinc-300 shrink-0">
-                          {fav.simbolo.substring(0, 2)}
-                        </div>
-
-                        {/* Nombre + empresa */}
-                        <div className="min-w-0 flex-1">
-                          <p className="font-bold text-white text-sm leading-none">{fav.simbolo}</p>
-                          <p className="text-[10px] text-zinc-500 truncate mt-0.5">{fav.nombreEmpresa || '—'}</p>
-                        </div>
-
-                        {/* Sparkline */}
-                        {spark.length > 1 && (
-                          <div className="shrink-0">
-                            <Sparkline data={spark} compact positive={isUp} />
-                          </div>
-                        )}
-
-                        {/* Precio + variación */}
-                        <div className="text-right shrink-0">
-                          {p
-                            ? <p className="font-bold text-white text-sm tabular-nums leading-none">${Number(p.close).toFixed(2)}</p>
-                            : <Skeleton className="h-4 w-16" />}
-                          <span className={cn('text-xs font-bold tabular-nums', isUp ? 'text-emerald-400' : 'text-red-400')}>
-                            {pct}
-                          </span>
-                        </div>
-
-                        {/* Botón eliminar */}
-                        {canDelete && (
-                          <button
-                            type="button"
-                            onClick={() => handleEliminar(fav.simbolo)}
-                            title="Eliminar de favoritos"
-                            className="p-1.5 rounded-lg text-zinc-700 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
-                          >
-                            <Trash2 className="size-3.5" />
-                          </button>
-                        )}
-                      </motion.div>
-                      {/* Escritorio: flex — nombre usa el espacio; precio+tendencia agrupados */}
-                      <motion.div
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        transition={{ delay: i * 0.04 }}
-                        className="hidden sm:flex items-center gap-4 px-5 py-4 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors"
-                      >
-                        <div className="flex min-w-0 flex-1 items-center gap-3">
-                          <div className="size-9 rounded-xl bg-[#0a0a0a] border border-white/10 flex items-center justify-center font-bold text-[10px] text-zinc-300 shrink-0">
-                            {fav.simbolo.substring(0, 2)}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="font-bold text-white text-sm">{fav.simbolo}</p>
-                            <p className="text-[10px] text-zinc-500 line-clamp-1">{fav.nombreEmpresa || '—'}</p>
-                            {sectorCat ? (
-                              <p className="text-[9px] text-zinc-600 mt-0.5 line-clamp-1">{sectorCat}</p>
-                            ) : null}
-                          </div>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-5">
-                          <div className="w-[5.5rem] text-right">
-                            {p
-                              ? <p className="font-bold text-white text-sm tabular-nums">${Number(p.close).toFixed(2)}</p>
-                              : <Skeleton className="h-4 w-16 ml-auto" />}
-                          </div>
-                          <div className="flex w-[5.5rem] flex-col items-end gap-1">
-                            {spark.length > 1 && <Sparkline data={spark} positive={isUp} />}
-                            <span className={cn('text-xs font-bold tabular-nums', isUp ? 'text-emerald-400' : 'text-red-400')}>
-                              {pct}
-                            </span>
-                          </div>
-                          <div className="flex w-8 justify-end">
-                            {canDelete && (
-                              <button
-                                type="button"
-                                onClick={() => handleEliminar(fav.simbolo)}
-                                title="Eliminar de favoritos"
-                                className="p-1.5 rounded-lg text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                              >
-                                <Trash2 className="size-3.5" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </motion.div>
-                    </React.Fragment>
-                  );
-                })}
-              </AnimatePresence>
-            )}
+          {/* Toolbar de Pestañas "Quiet Luxury" */}
+          <div className="flex flex-wrap items-center gap-3 p-1 rounded-2xl bg-white/[0.02] border border-white/5 w-fit">
+            {[
+              { id: 'watchlist', label: 'Watchlist', icon: Star },
+              { id: 'noticias', label: 'Noticias recientes', icon: BookOpen },
+              { id: 'senales', label: 'Señales Engine', icon: Activity },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setVistaActiva(tab.id as any)}
+                className={cn(
+                  'flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-[11px] font-bold tracking-widest transition-all duration-300',
+                  vistaActiva === tab.id
+                    ? 'bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] shadow-[0_0_20px_rgba(212,175,55,0.1)]'
+                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5 border border-transparent'
+                )}
+              >
+                <tab.icon className={cn('size-3.5', vistaActiva === tab.id ? 'text-[#D4AF37]' : 'text-zinc-600')} />
+                {tab.label}
+              </button>
+            ))}
           </div>
 
-          {/* Paginación de favoritos */}
-          {totalPagsFav > 1 && (
-            <div className="flex items-center justify-between px-1 pt-1">
-              <button
-                onClick={() => setPaginaFav(p => Math.max(0, p - 1))}
-                disabled={paginaFav === 0}
-                className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+          <AnimatePresence mode="wait">
+            {vistaActiva === 'watchlist' && (
+              <motion.div
+                key="watchlist"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-4"
               >
-                <ChevronLeft className="size-3.5" />
-              </button>
 
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] text-zinc-600">
-                  {paginaFav * FAV_POR_PAGINA + 1}–{Math.min((paginaFav + 1) * FAV_POR_PAGINA, favoritos.length)} de {favoritos.length}
-                </span>
-                <div className="flex items-center gap-1">
-                  {getPaginationRange(paginaFav, totalPagsFav).map((p, i) => (
-                    <React.Fragment key={i}>
-                      {p === '...' ? (
-                        <span className="px-1 text-[10px] text-zinc-600">...</span>
-                      ) : (
-                        <button
-                          onClick={() => setPaginaFav(p as number)}
+                {/* Buscador con validación */}
+                {portafolioSel && (
+                  <div className="space-y-1.5">
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      {/* Input con dropdown */}
+                      <div className="relative flex-1 min-w-0">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-500 z-10" />
+                        <input
+                          type="text"
+                          placeholder="SÍMBOLO (EJ. AAPL, TSLA, NVDA...)"
+                          value={busqueda}
+                          onChange={e => { setBusqueda(e.target.value.toUpperCase()); setShowSugerencias(true); }}
+                          onFocus={() => setShowSugerencias(true)}
+                          onBlur={() => setTimeout(() => setShowSugerencias(false), 150)}
+                          onKeyDown={e => e.key === 'Enter' && handleAgregar()}
                           className={cn(
-                            'size-5 rounded-md text-[9px] font-bold transition-all',
-                            paginaFav === p
-                              ? 'bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/30'
-                              : 'bg-white/5 text-zinc-600 hover:text-white'
+                            'w-full bg-[#0a0a0a] border rounded-xl py-3 pl-10 pr-10 text-[11px] font-black tracking-widest uppercase focus:outline-none placeholder:text-zinc-700 transition-all',
+                            validacion === 'ok' && 'border-emerald-500/30 focus:border-emerald-500/50',
+                            validacion === 'error' && 'border-red-500/30 focus:border-red-500/50',
+                            validacion === 'idle' && 'border-white/5 focus:border-white/20',
                           )}
-                        >
-                          {(p as number) + 1}
-                        </button>
-                      )}
-                    </React.Fragment>
-                  ))}
+                        />
+                        {/* Icono de validación dentro del input */}
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <ValidationIcon />
+                        </div>
+
+                        {/* Dropdown de sugerencias */}
+                        <AnimatePresence>
+                          {showSugerencias && sugerencias.length > 0 && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -4 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -4 }}
+                              className="absolute top-full mt-1 left-0 right-0 z-50 bg-[#111] border border-white/10 rounded-xl overflow-hidden shadow-xl"
+                            >
+                              {sugerencias.map(s => (
+                                <button
+                                  key={s.simbolo}
+                                  onMouseDown={() => seleccionarSugerencia(s)}
+                                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors text-left"
+                                >
+                                  <div className="size-7 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-bold text-zinc-300 shrink-0">
+                                    {s.simbolo.substring(0, 2)}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-bold text-white">{s.simbolo}</p>
+                                    <p className="text-[10px] text-zinc-500 truncate">{s.nombre}</p>
+                                  </div>
+                                  {s.sector && (
+                                    <span className="ml-auto text-[9px] text-zinc-600 uppercase font-bold tracking-wide shrink-0">
+                                      {s.sector}
+                                    </span>
+                                  )}
+                                </button>
+                              ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+
+                      {/* Botón agregar */}
+                      <button
+                        onClick={handleAgregar}
+                        disabled={validacion !== 'ok'}
+                        className="w-full sm:w-auto shrink-0 justify-center px-6 py-2.5 rounded-xl bg-white/[0.03] border border-white/10 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-all flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <Activity className="size-3.5" />
+                        Agregar
+                      </button>
+                    </div>
+
+                    {/* Mensaje de validación */}
+                    {msgValidacion && (
+                      <p className={cn(
+                        'text-xs pl-1 flex items-center gap-1.5',
+                        validacion === 'ok' && 'text-emerald-400',
+                        validacion === 'error' && 'text-red-400',
+                      )}>
+                        {msgValidacion}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Tabla watchlist — móvil: tarjetas; sm+: tabla */}
+                <div className="rounded-2xl bg-white/[0.02] border border-white/5 overflow-hidden">
+                  {/* Cabecera móvil — columnas alineadas con la nueva fila compacta */}
+                  <div className="sm:hidden flex items-center gap-3 px-4 py-2.5 border-b border-white/5 text-[9px] uppercase font-bold tracking-wider text-zinc-600">
+                    <div className="size-8 shrink-0" aria-hidden />
+                    <span className="flex-1">Símbolo</span>
+                    <span className="w-[80px] shrink-0 text-right">Tendencia</span>
+                    <span className="w-[72px] shrink-0 text-right">Precio · Var.</span>
+                    <div className="w-[26px] shrink-0" aria-hidden />
+                  </div>
+                  {/* Cabecera escritorio — flex: izquierda flexible, métricas agrupadas a la derecha */}
+                  <div className="hidden sm:flex items-center gap-4 px-5 py-3 text-[10px] uppercase font-bold tracking-widest text-zinc-600 border-b border-white/5">
+                    <span className="min-w-0 flex-1">Símbolo / Empresa</span>
+                    <div className="flex shrink-0 items-center gap-5">
+                      <span className="w-[5.5rem] text-right">Último precio</span>
+                      <span className="w-[5.5rem] text-right">Tendencia</span>
+                      <span className="w-8 shrink-0" aria-hidden />
+                    </div>
+                  </div>
+
+                  {!portafolioSel ? (
+                    <div className="flex flex-col items-center justify-center gap-3 py-16">
+                      <BookOpen className="size-8 text-zinc-800" />
+                      <p className="text-sm text-zinc-600">Selecciona un portafolio para ver sus símbolos</p>
+                    </div>
+                  ) : loadingFav ? (
+                    <div className="px-4 sm:px-5 py-4 space-y-4">
+                      {[...Array(4)].map((_, i) => (
+                        <React.Fragment key={i}>
+                          <div className="sm:hidden space-y-3 py-1">
+                            <div className="flex justify-between gap-2">
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <Skeleton className="size-9 rounded-xl shrink-0" />
+                                <div className="space-y-1.5 min-w-0 flex-1">
+                                  <Skeleton className="h-3 w-16" />
+                                  <Skeleton className="h-2 w-32" />
+                                </div>
+                              </div>
+                              <Skeleton className="size-8 rounded-lg shrink-0" />
+                            </div>
+                            <div className="flex justify-between items-end pl-1">
+                              <Skeleton className="h-5 w-24" />
+                              <Skeleton className="h-8 w-28" />
+                            </div>
+                          </div>
+                          <div className="hidden sm:flex items-center gap-4 py-3">
+                            <div className="flex flex-1 items-center gap-3 min-w-0">
+                              <Skeleton className="size-9 rounded-xl shrink-0" />
+                              <div className="space-y-1.5 min-w-0 flex-1">
+                                <Skeleton className="h-3 w-14" />
+                                <Skeleton className="h-2 w-40 max-w-full" />
+                              </div>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-5">
+                              <Skeleton className="h-3 w-16" />
+                              <Skeleton className="h-6 w-20" />
+                              <Skeleton className="size-7 rounded-lg" />
+                            </div>
+                          </div>
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  ) : favoritos.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center gap-3 py-16">
+                      <Star className="size-8 text-zinc-800" />
+                      <p className="text-sm text-zinc-600 text-center leading-relaxed">
+                        Busca un símbolo del catálogo y agrégalo
+                      </p>
+                    </div>
+                  ) : (
+                    <AnimatePresence mode="popLayout">
+                      {favPagina.map((fav, i) => {
+                        const p = precios[fav.simbolo];
+                        const { pct, isUp } = variacion(p);
+                        const spark = sparklines[fav.simbolo] ?? [];
+                        const canDelete = !portafolioSel || !defaultPfIds.has(portafolioSel.id);
+                        const sectorCat = catalogo.find(c => c.simbolo === fav.simbolo)?.sector;
+                        return (
+                          <React.Fragment key={fav.id}>
+                            {/* Móvil: fila compacta en una línea */}
+                            <motion.div
+                              initial={{ opacity: 0, y: 6 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, x: -20 }}
+                              transition={{ delay: i * 0.04 }}
+                              className="sm:hidden flex items-center gap-3 px-4 py-2.5 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors"
+                            >
+                              {/* Avatar */}
+                              <div className="size-8 rounded-lg bg-[#0a0a0a] border border-white/10 flex items-center justify-center font-bold text-[9px] text-zinc-300 shrink-0">
+                                {fav.simbolo.substring(0, 2)}
+                              </div>
+
+                              {/* Nombre + empresa */}
+                              <div className="min-w-0 flex-1">
+                                <p className="font-bold text-white text-sm leading-none">{fav.simbolo}</p>
+                                <p className="text-[10px] text-zinc-500 truncate mt-0.5">{fav.nombreEmpresa || '—'}</p>
+                              </div>
+
+                              {/* Sparkline */}
+                              {spark.length > 1 && (
+                                <div className="shrink-0">
+                                  <Sparkline data={spark} compact positive={isUp} />
+                                </div>
+                              )}
+
+                              {/* Precio + variación */}
+                              <div className="text-right shrink-0">
+                                {p
+                                  ? <p className="font-bold text-white text-sm tabular-nums leading-none">${Number(p.close).toFixed(2)}</p>
+                                  : <Skeleton className="h-4 w-16" />}
+                                <span className={cn('text-xs font-bold tabular-nums', isUp ? 'text-emerald-400' : 'text-red-400')}>
+                                  {pct}
+                                </span>
+                              </div>
+
+                              {/* Botón eliminar */}
+                              {canDelete && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleEliminar(fav.simbolo)}
+                                  title="Eliminar de favoritos"
+                                  className="p-1.5 rounded-lg text-zinc-700 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </button>
+                              )}
+                            </motion.div>
+                            {/* Escritorio: flex — nombre usa el espacio; precio+tendencia agrupados */}
+                            <motion.div
+                              initial={{ opacity: 0, y: 6 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, x: -20 }}
+                              transition={{ delay: i * 0.04 }}
+                              className="hidden sm:flex items-center gap-4 px-5 py-3 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors"
+                            >
+                              <div className="flex min-w-0 flex-1 items-center gap-3">
+                                <div className="size-9 rounded-xl bg-[#0a0a0a] border border-white/10 flex items-center justify-center font-bold text-[10px] text-zinc-300 shrink-0">
+                                  {fav.simbolo.substring(0, 2)}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-bold text-white text-sm">{fav.simbolo}</p>
+                                  <p className="text-[10px] text-zinc-500 line-clamp-1">{fav.nombreEmpresa || '—'}</p>
+                                  {sectorCat ? (
+                                    <p className="text-[9px] text-zinc-600 mt-0.5 line-clamp-1">{sectorCat}</p>
+                                  ) : null}
+                                </div>
+                              </div>
+                              <div className="flex shrink-0 items-center gap-5">
+                                <div className="w-[5.5rem] text-right">
+                                  {p
+                                    ? <p className="font-bold text-white text-sm tabular-nums">${Number(p.close).toFixed(2)}</p>
+                                    : <Skeleton className="h-4 w-16 ml-auto" />}
+                                </div>
+                                <div className="flex w-[5.5rem] flex-col items-end gap-1">
+                                  {spark.length > 1 && <Sparkline data={spark} positive={isUp} />}
+                                  <span className={cn('text-xs font-bold tabular-nums', isUp ? 'text-emerald-400' : 'text-red-400')}>
+                                    {pct}
+                                  </span>
+                                </div>
+                                <div className="flex w-8 justify-end">
+                                  {canDelete && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleEliminar(fav.simbolo)}
+                                      title="Eliminar de favoritos"
+                                      className="p-1.5 rounded-lg text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                                    >
+                                      <Trash2 className="size-3.5" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </motion.div>
+                          </React.Fragment>
+                        );
+                      })}
+                    </AnimatePresence>
+                  )}
                 </div>
-              </div>
 
-              <button
-                onClick={() => setPaginaFav(p => Math.min(totalPagsFav - 1, p + 1))}
-                disabled={paginaFav === totalPagsFav - 1}
-                className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                {/* Paginación de favoritos */}
+                {totalPagsFav > 1 && (
+                  <div className="flex items-center justify-between px-1 pt-1">
+                    <button
+                      onClick={() => setPaginaFav(p => Math.max(0, p - 1))}
+                      disabled={paginaFav === 0}
+                      className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft className="size-3.5" />
+                    </button>
+
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-zinc-600">
+                        {paginaFav * FAV_POR_PAGINA + 1}–{Math.min((paginaFav + 1) * FAV_POR_PAGINA, favoritos.length)} de {favoritos.length}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        {getPaginationRange(paginaFav, totalPagsFav).map((p, i) => (
+                          <React.Fragment key={i}>
+                            {p === '...' ? (
+                              <span className="px-1 text-[10px] text-zinc-600">...</span>
+                            ) : (
+                              <button
+                                onClick={() => setPaginaFav(p as number)}
+                                className={cn(
+                                  'size-5 rounded-md text-[9px] font-bold transition-all',
+                                  paginaFav === p
+                                    ? 'bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/30'
+                                    : 'bg-white/5 text-zinc-600 hover:text-white'
+                                )}
+                              >
+                                {(p as number) + 1}
+                              </button>
+                            )}
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setPaginaFav(p => Math.min(totalPagsFav - 1, p + 1))}
+                      disabled={paginaFav === totalPagsFav - 1}
+                      className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ChevronRight className="size-3.5" />
+                    </button>
+                  </div>
+                )}
+
+              </motion.div>
+            )}
+
+            {vistaActiva === 'noticias' && (
+              <motion.div
+                key="noticias"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-4"
               >
-                <ChevronRight className="size-3.5" />
-              </button>
-            </div>
-          )}
+                {loadingNoticias ? (
+                  <div className="flex flex-col gap-4">
+                    {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-3xl" />)}
+                  </div>
+                ) : noticiasPf.length === 0 ? (
+                  <div className="p-8 rounded-3xl bg-[#080808]/40 border border-white/5 flex flex-col items-center justify-center min-h-[400px] text-center">
+                    <BookOpen className="size-8 text-zinc-800 mb-4" />
+                    <h3 className="text-sm font-bold text-zinc-500">Sin noticias para este portafolio</h3>
+                    <p className="text-xs text-zinc-600 mt-2">Agrega más símbolos a tu watchlist para ver cobertura.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 gap-6">
+                      {noticiasPf
+                        .slice(paginaNoticias * NOTICIAS_PF_POR_PAGINA, (paginaNoticias + 1) * NOTICIAS_PF_POR_PAGINA)
+                        .map((n, i) => {
+                          const autor = n.autor || n.fuente || 'FinTrend';
+                          const iso = n.fechaPublicacion || n.fecha || new Date().toISOString();
 
+                          return (
+                            <article key={i} className="rounded-2xl border border-white/[0.08] bg-[#0f0f0f] p-4 sm:p-5 shadow-sm transition-all hover:border-white/15 group">
+                              <header className="flex items-start justify-between gap-2">
+                                <div className="flex min-w-0 items-center gap-2">
+                                  {n.imagenAutorUrl ? (
+                                    <img src={n.imagenAutorUrl} alt="" className="h-8 w-8 shrink-0 rounded-full border border-white/10 object-cover" />
+                                  ) : (
+                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-zinc-800/80 text-[9px] font-bold text-zinc-300">
+                                      {iniciales(autor)}
+                                    </div>
+                                  )}
+                                  <div className="min-w-0">
+                                    <p className="truncate text-sm font-bold text-white">{autor}</p>
+                                    <p className="truncate text-[10px] text-zinc-500">Noticias y mercado</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1 text-[9px] text-zinc-500">
+                                  <Clock className="size-3 shrink-0 opacity-70" />
+                                  <span className="whitespace-nowrap">{timeAgo(iso)}</span>
+                                </div>
+                              </header>
+
+                              <div className="mt-3 flex flex-wrap items-center gap-2">
+                                <SentimientoBadge tipo={n.sentimiento || 'Neutral'} />
+                                <span className="px-2 py-0.5 rounded-lg bg-white/5 border border-white/10 text-zinc-400 text-[9px] font-black uppercase tracking-tighter">
+                                  {n.simbolo}
+                                </span>
+                                <span className="text-[10px] text-zinc-600">· {n.fuente}</span>
+                              </div>
+
+                              <div className="mt-3 min-w-0">
+                                <h4 className="text-sm font-bold text-white transition-colors line-clamp-2 leading-snug">
+                                  {n.titulo}
+                                </h4>
+                                <p className="mt-1.5 text-xs text-zinc-500 line-clamp-2 leading-relaxed">
+                                  {n.resumen || n.description || ''}
+                                </p>
+                              </div>
+
+                              <footer className="mt-4 flex items-center justify-between gap-3 border-t border-white/5 pt-3">
+                                <div className="flex items-center gap-4 text-zinc-500">
+                                  <span className="inline-flex items-center gap-1.5 text-xs">
+                                    <MessageCircle className="size-3" />
+                                    <span className="tabular-nums">—</span>
+                                  </span>
+                                </div>
+                                {n.url && (
+                                  <a
+                                    href={n.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 text-zinc-400 transition hover:border-[#D4AF37]/30 hover:text-white"
+                                  >
+                                    <ChevronRight className="size-3.5" />
+                                  </a>
+                                )}
+                              </footer>
+                            </article>
+                          );
+                        })}
+                    </div>
+
+                    {/* Controles de paginación de noticias */}
+                    {noticiasPf.length > NOTICIAS_PF_POR_PAGINA && (
+                      <div className="flex items-center justify-between px-1 pt-4 border-t border-white/5">
+                        <button
+                          onClick={() => setPaginaNoticias(p => Math.max(0, p - 1))}
+                          disabled={paginaNoticias === 0}
+                          className="p-2 rounded-xl bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          <ChevronLeft className="size-4" />
+                        </button>
+
+                        <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">
+                          Página {paginaNoticias + 1} de {Math.ceil(noticiasPf.length / NOTICIAS_PF_POR_PAGINA)}
+                        </span>
+
+                        <button
+                          onClick={() => setPaginaNoticias(p => Math.min(Math.ceil(noticiasPf.length / NOTICIAS_PF_POR_PAGINA) - 1, p + 1))}
+                          disabled={paginaNoticias === Math.ceil(noticiasPf.length / NOTICIAS_PF_POR_PAGINA) - 1}
+                          className="p-2 rounded-xl bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          <ChevronRight className="size-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {vistaActiva === 'senales' && (
+              <motion.div
+                key="senales"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="p-8 rounded-3xl bg-[#080808]/40 border border-white/5 backdrop-blur-sm flex flex-col items-center justify-center min-h-[400px] text-center"
+              >
+                <div className="p-6 rounded-full bg-[#D4AF37]/5 border border-[#D4AF37]/10 mb-6 relative overflow-hidden group">
+                  <Activity className="size-10 text-[#D4AF37]/40 relative z-10" />
+                  <div className="absolute inset-0 bg-[#D4AF37]/10 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <h3 className="text-xl font-black text-white mb-3 tracking-tighter uppercase">Señales Engine</h3>
+                <div className="flex items-center gap-3 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 mb-4">
+                  <div className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">En Desarrollo</span>
+                </div>
+                <p className="text-zinc-500 text-sm max-w-xs leading-relaxed font-medium">
+                  Nuestro motor de IA está procesando patrones históricos. Las señales en tiempo real estarán disponibles próximamente.
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Historial: fila a ancho completo en desktop */}
@@ -946,10 +1185,10 @@ export const Seguimiento = () => {
                   key={fav.simbolo}
                   onClick={() => setSimboloGrafico(fav.simbolo)}
                   className={cn(
-                    'px-3 py-1.5 rounded-lg text-xs font-medium transition-all border',
+                    'px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-300 border',
                     simboloGrafico === fav.simbolo
-                      ? 'bg-[#D4AF37]/20 border-[#D4AF37]/40 text-[#D4AF37]'
-                      : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white hover:border-white/20'
+                      ? 'bg-white/10 border-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.05)]'
+                      : 'bg-[#0a0a0a] border-white/5 text-zinc-500 hover:text-zinc-300 hover:border-white/10'
                   )}
                 >
                   {fav.simbolo}
@@ -958,36 +1197,36 @@ export const Seguimiento = () => {
             </div>
 
             {simboloGrafico ? (
-                loadingGrafico ? (
-                  <div className="h-[320px] rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-center">
-                    <div className="flex items-center gap-3 text-zinc-500">
-                      <div className="w-5 h-5 border-2 border-zinc-600 border-t-[#D4AF37] rounded-full animate-spin" />
-                      <span className="text-sm">Cargando datos...</span>
-                    </div>
-                  </div>
-                ) : (
-                  <ChartHistorial
-                    data={datosGrafico.map(p => ({
-                      fecha: p.fecha,
-                      close: Number(p.close),
-                      open: Number(p.open),
-                      high: Number(p.high),
-                      low: Number(p.low),
-                    }))}
-                    simbolo={simboloGrafico}
-                    timeRange={rangoGrafico}
-                    onTimeRangeChange={setRangoGrafico}
-                  />
-                )
-              ) : (
-                <div className="h-[200px] rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-center">
-                  <div className="text-center">
-                    <TrendingUp className="size-8 text-zinc-700 mx-auto mb-2" />
-                    <p className="text-sm text-zinc-500">Selecciona un símbolo para ver su gráfico</p>
+              loadingGrafico ? (
+                <div className="h-[320px] rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-center">
+                  <div className="flex items-center gap-3 text-zinc-500">
+                    <div className="w-5 h-5 border-2 border-zinc-600 border-t-[#D4AF37] rounded-full animate-spin" />
+                    <span className="text-sm">Cargando datos...</span>
                   </div>
                 </div>
-              )}
-            </div>
+              ) : (
+                <ChartHistorial
+                  data={datosGrafico.map(p => ({
+                    fecha: p.fecha,
+                    close: Number(p.close),
+                    open: Number(p.open),
+                    high: Number(p.high),
+                    low: Number(p.low),
+                  }))}
+                  simbolo={simboloGrafico}
+                  timeRange={rangoGrafico}
+                  onTimeRangeChange={setRangoGrafico}
+                />
+              )
+            ) : (
+              <div className="h-[200px] rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-center">
+                <div className="text-center">
+                  <TrendingUp className="size-8 text-zinc-700 mx-auto mb-2" />
+                  <p className="text-sm text-zinc-500">Selecciona un símbolo para ver su gráfico</p>
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>

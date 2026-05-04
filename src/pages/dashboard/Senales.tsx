@@ -43,12 +43,12 @@ const MiniSparkline = ({ trend }: { trend: 'up' | 'down' | 'neutral' }) => {
     const width = 100;
     const height = 110;
     const step = width / (pts.length - 1);
-    
+
     return pts.reduce((acc, p, i) => {
       const x = i * step;
       const y = height - p;
       if (i === 0) return `M ${x} ${y}`;
-      
+
       // Punto de control para suavizado
       const prevX = (i - 1) * step;
       const prevY = height - pts[i - 1];
@@ -61,9 +61,9 @@ const MiniSparkline = ({ trend }: { trend: 'up' | 'down' | 'neutral' }) => {
   const color = trend === 'up' ? '#10b981' : trend === 'down' ? '#ef4444' : '#71717a';
 
   return (
-    <svg 
-      viewBox="0 0 100 110" 
-      className="w-full h-20 overflow-visible" 
+    <svg
+      viewBox="0 0 100 110"
+      className="w-full h-20 overflow-visible"
       preserveAspectRatio="none"
     >
       <defs>
@@ -100,10 +100,10 @@ const SIMBOLOS_RAPIDOS = ['AAPL', 'NVDA', 'MSFT', 'GOOGL', 'TSLA'];
 const SignalBadge = ({ type }: { type: TipoSenal | null }) => {
   if (!type) return <Skeleton className="h-8 w-24 rounded-full" />;
   const map: Record<TipoSenal, { color: string; Icon: React.ElementType }> = {
-    Compra:               { color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30', Icon: ArrowUpRight },
-    Venta:                { color: 'text-red-400 bg-red-500/10 border-red-500/30',             Icon: ArrowDownRight },
-    Mantener:             { color: 'text-zinc-400 bg-white/5 border-white/10',                 Icon: Minus },
-    'Sin datos suficientes': { color: 'text-zinc-500 bg-white/5 border-white/10',             Icon: Minus },
+    Compra: { color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30', Icon: ArrowUpRight },
+    Venta: { color: 'text-red-400 bg-red-500/10 border-red-500/30', Icon: ArrowDownRight },
+    Mantener: { color: 'text-zinc-400 bg-white/5 border-white/10', Icon: Minus },
+    'Sin datos suficientes': { color: 'text-zinc-500 bg-white/5 border-white/10', Icon: Minus },
   };
   const { color, Icon } = map[type];
   return (
@@ -146,21 +146,21 @@ export const Senales = () => {
       const fin = new Date();
       const inicio = new Date();
       inicio.setDate(fin.getDate() - 15);
-      
+
       await ms2.get(`/api/precios/${s}/range?inicio=${inicio.toISOString().split('.')[0]}&fin=${fin.toISOString().split('.')[0]}`);
       setCurrentStep(1);
-      
+
       await ms3.get(`/api/noticias/${s}/sentimiento`);
       setCurrentStep(2);
- 
+
       const data = await getSenal(s);
       setCurrentStep(3);
-      
+
       setTimeout(() => {
         setResultado(data);
         setLoading(false);
       }, 600);
-      
+
     } catch {
       setError('No pudimos completar el análisis en este momento. Vuelve a intentar.');
       setCurrentStep(-1);
@@ -172,7 +172,7 @@ export const Senales = () => {
     getSimbolos().then(list => {
       setCatalogo(list);
       setCatalogoCargado(true);
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -237,16 +237,12 @@ export const Senales = () => {
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-          <div className="flex items-center gap-2 mb-1">
-            <div className="p-1.5 rounded-lg bg-[#D4AF37]/20 text-[#D4AF37]">
-              <Zap className="size-4 fill-current" />
-            </div>
-            <h1 className="text-3xl font-bold tracking-tight">Señales IA</h1>
-          </div>
-          <p className="text-zinc-400 text-sm">
-            Recomendaciones de trading · <span className="text-zinc-600">Análisis combinado de precio y noticias</span>
-          </p>
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-4">
+          <div className="w-1.5 h-10 bg-[#D4AF37] rounded-full shadow-[0_0_15px_rgba(212,175,55,0.3)]" />
+          <h1 className="text-3xl font-black tracking-tighter uppercase flex items-baseline">
+            <span className="text-white">Señales IA</span>
+            <span className="text-zinc-700 ml-3">Engine</span>
+          </h1>
         </motion.div>
       </div>
 
@@ -261,19 +257,18 @@ export const Senales = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-500 z-10" />
             <input
               type="text"
-              placeholder="Símbolo (ej. AAPL, TSLA, NVDA…)"
+              placeholder="SÍMBOLO (EJ. AAPL, TSLA, NVDA…)"
               value={simbolo}
               onChange={e => { setSimbolo(e.target.value.toUpperCase()); setShowSugerencias(true); }}
               onFocus={() => setShowSugerencias(true)}
               onBlur={() => setTimeout(() => setShowSugerencias(false), 150)}
               onKeyDown={e => e.key === 'Enter' && !mostrarErrorSimbolo && handleBuscar(simbolo)}
-              className={`w-full bg-white/5 border rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none placeholder:text-zinc-600 transition-all ${
-                mostrarErrorSimbolo
-                  ? 'border-red-500/50 focus:border-red-500/70'
-                  : simbolo && simboloValido && catalogoCargado
+              className={`w-full bg-transparent border rounded-lg py-2.5 pl-10 pr-4 text-[10px] text-white uppercase tracking-widest focus:outline-none placeholder:text-zinc-600 transition-all ${mostrarErrorSimbolo
+                ? 'border-red-500/50 focus:border-red-500/70'
+                : simbolo && simboloValido && catalogoCargado
                   ? 'border-emerald-500/40 focus:border-emerald-500/60'
-                  : 'border-white/10 focus:border-[#D4AF37]/50'
-              }`}
+                  : 'border-white/10 focus:border-white/20'
+                }`}
             />
 
             {/* Sugerencias */}
@@ -304,9 +299,9 @@ export const Senales = () => {
           <button
             onClick={() => handleBuscar(simbolo)}
             disabled={loading || !simbolo.trim() || mostrarErrorSimbolo}
-            className="px-5 py-3 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-sm font-bold hover:bg-[#D4AF37]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-6 py-2.5 rounded-lg bg-transparent border border-white/10 text-white text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-white/5 transition-all disabled:opacity-50 flex items-center gap-2"
           >
-            {loading ? <Loader2 className="size-4 animate-spin" /> : <Zap className="size-4" />}
+            {loading ? <Loader2 className="size-3.5 animate-spin" /> : <Zap className="size-3.5" />}
             Analizar
           </button>
         </div>
@@ -318,7 +313,7 @@ export const Senales = () => {
             <button
               key={s}
               onClick={() => handleBuscar(s)}
-              className="px-3 py-1.5 rounded-full text-xs font-bold transition-all border bg-white/5 border-white/10 text-zinc-500 hover:text-[#D4AF37] hover:border-[#D4AF37]/30 hover:bg-[#D4AF37]/5"
+              className="px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-[0.2em] transition-all border bg-transparent border-white/10 text-zinc-500 hover:text-white hover:border-white/20"
             >
               {s}
             </button>
@@ -409,9 +404,9 @@ export const Senales = () => {
                   </div>
                 </div>
                 <div className="mt-4 pt-4 border-t border-white/5">
-                   <p className="text-xs text-zinc-400 leading-relaxed italic">
+                  <p className="text-xs text-zinc-400 leading-relaxed italic">
                     "{resultado.mensaje}"
-                   </p>
+                  </p>
                 </div>
               </div>
 
@@ -432,11 +427,11 @@ export const Senales = () => {
                     <p className="text-[10px] text-zinc-600 font-bold uppercase">Success Rate: 72%</p>
                   </div>
                 </div>
-                
+
                 <div className="flex-1 flex items-end pb-2">
                   <MiniSparkline trend={resultado.senal === 'Compra' ? 'up' : resultado.senal === 'Venta' ? 'down' : 'neutral'} />
                 </div>
-                
+
                 <div className="flex justify-between mt-2 text-[10px] text-zinc-600 font-bold uppercase tracking-tighter">
                   <span>30 días atrás</span>
                   <span>Hoy</span>
