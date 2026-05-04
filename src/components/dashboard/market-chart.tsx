@@ -1,5 +1,4 @@
 import React, { useMemo } from 'react';
-import { motion } from "framer-motion";
 import Earth from "@/components/Earth";
 import type { GlobeStockMarker } from "@/components/ui/wireframe-dotted-globe";
 
@@ -59,10 +58,6 @@ const COUNTRY_POINTS = (() => {
   })
 })()
 
-/**
- * Pocas etiquetas (franjas anchas): un nodo por zona del mundo para que siga
- * habiendo algo visible al girar, sin saturar el globo.
- */
 function markersForContinuousCoverage(
   list: { lng: number; lat: number }[],
   bands = 6,
@@ -96,50 +91,8 @@ export const MarketChart = () => {
   const globeMarkers = useMemo(() => markersForContinuousCoverage(COUNTRY_POINTS), []);
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="col-span-1 lg:col-span-2 p-4 sm:p-8 rounded-2xl sm:rounded-3xl bg-white/[0.02] border border-white/5 relative overflow-hidden group min-h-0 sm:min-h-[500px]"
-    >
-      <div className="flex flex-col gap-4 mb-6 sm:mb-8 sm:flex-row sm:items-start sm:justify-between relative z-20">
-        <div className="min-w-0 pr-0 sm:pr-4">
-          <h3 className="text-lg sm:text-xl font-bold text-white mb-1 leading-tight">
-            Presencia de Mercado Global
-          </h3>
-          <p className="text-xs sm:text-sm text-zinc-500 leading-relaxed max-w-prose">
-            Actividad en tiempo real a través de los principales nodos financieros
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          {['LIVE', '24H', 'HISTORY'].map((period) => (
-            <button 
-              key={period}
-              type="button"
-              className="px-3 py-1.5 sm:py-1 rounded-lg text-[10px] font-bold transition-all hover:bg-[#D4AF37]/10 text-zinc-500 hover:text-[#D4AF37] border border-white/5 hover:border-[#D4AF37]/20 tracking-widest"
-            >
-              {period}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="h-[240px] min-h-[220px] sm:h-[300px] sm:min-h-0 w-full flex items-center justify-center relative z-10 overflow-hidden mx-auto">
-        <Earth width={480} height={290} markers={globeMarkers} className="max-w-full" />
-      </div>
-
-      <div className="mt-4 sm:mt-6 grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-4 sm:gap-4 border-t border-white/5 pt-4 sm:pt-6 relative z-20">
-        {[
-          { label: 'Nodos Activos', value: '1,240' },
-          { label: 'Regiones', value: '182' },
-          { label: 'Latencia Prom.', value: '14ms' },
-          { label: 'Uptime Sistema', value: '99.99%' },
-        ].map((item) => (
-          <div key={item.label} className="min-w-0">
-            <p className="text-[9px] sm:text-[10px] text-zinc-600 uppercase font-bold tracking-wider mb-1 leading-tight">{item.label}</p>
-            <p className="text-sm font-bold text-white tabular-nums">{item.value}</p>
-          </div>
-        ))}
-      </div>
-    </motion.div>
+    <div className="w-full flex items-center justify-center relative z-10 overflow-hidden mx-auto">
+      <Earth width={480} height={290} markers={globeMarkers} className="max-w-full" />
+    </div>
   );
 };

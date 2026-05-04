@@ -27,37 +27,37 @@ export const StatCard = ({
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white/[0.02] border border-white/5 hover:border-[#D4AF37]/30 transition-all group relative overflow-hidden"
+      className="p-3 sm:p-6 rounded-xl sm:rounded-3xl bg-white/[0.02] border border-white/5 hover:border-[#D4AF37]/30 transition-all group relative overflow-hidden"
     >
-      <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-10 transition-opacity">
+      <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-10 transition-opacity hidden sm:block">
         <Icon className="size-24" />
       </div>
 
-      <div className="flex items-center justify-between mb-4">
-        <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-zinc-400 group-hover:text-[#D4AF37] group-hover:border-[#D4AF37]/20 transition-all">
-          <Icon className="size-5" />
+      <div className="flex items-center justify-between mb-2 sm:mb-4">
+        <div className="p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 text-zinc-400 group-hover:text-[#D4AF37] group-hover:border-[#D4AF37]/20 transition-all">
+          <Icon className="size-3.5 sm:size-5" />
         </div>
         <div className={cn(
-          "flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full",
+          "flex items-center gap-0.5 sm:gap-1 text-[8px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full",
           trend === 'up' ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
         )}>
-          {trend === 'up' ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
+          {trend === 'up' ? <TrendingUp className="size-2 sm:size-3" /> : <TrendingDown className="size-2 sm:size-3" />}
           {change}
         </div>
       </div>
 
       <div>
-        <p className="text-zinc-500 text-[10px] sm:text-sm font-medium mb-1">{label}</p>
+        <p className="text-zinc-500 text-[8px] sm:text-sm font-medium mb-0.5 sm:mb-1 truncate">{label}</p>
         <h3
           className={cn(
             'font-bold text-white tracking-tight',
-            valueClassName ?? 'text-lg sm:text-2xl',
+            valueClassName ?? 'text-sm sm:text-2xl',
           )}
         >
           {value}
         </h3>
         {subValue && (
-          <p className="text-[9px] sm:text-xs text-zinc-600 mt-1 font-medium">{subValue}</p>
+          <p className="hidden sm:block text-[9px] sm:text-xs text-zinc-600 mt-1 font-medium">{subValue}</p>
         )}
       </div>
 
