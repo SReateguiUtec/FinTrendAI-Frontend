@@ -219,9 +219,9 @@ const Navbar: React.FC = () => {
 
 const stats = [
     {
-        value: 98.5,
-        suffix: '%',
-        label: 'Precisión promediada',
+        value: 250,
+        suffix: '+',
+        label: 'Fuentes monitoreadas',
         duration: 5,
     },
     {
