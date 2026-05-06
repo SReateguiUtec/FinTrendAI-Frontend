@@ -62,6 +62,7 @@ export const Analitica = () => {
   const [tendencias, setTendencias] = useState<any[]>([]);
   const [populares, setPopulares] = useState<any[]>([]);
   const [impactoNoticias, setImpactoNoticias] = useState<any[]>([]);
+  const [noticiasVista, setNoticiasVista] = useState<any[]>([]);
   const [rendimientoActivo, setRendimientoActivo] = useState<any[]>([]);
 
   useEffect(() => {
@@ -112,15 +113,19 @@ export const Analitica = () => {
     setPeriodoSeleccionado(periodo);
     setShowPeriodOptions(false);
     try {
-      const [secData, trendData, popResponse] = await Promise.all([
+      const [secData, trendData, popResponse, impactoResponse, noticiasResponse] = await Promise.all([
         analiticaService.getRendimientoSector(periodo),
         analiticaService.getTendencias(),
         analiticaService.ms5.get('/api/analitica/popularidad-activos'),
+        analiticaService.ms5.get('/api/analitica/impacto-noticias'),
+        analiticaService.ms5.get('/api/analitica/rendimiento-detallado'),
       ]);
 
       setSectores(secData || []);
       setTendencias(trendData || []);
       setPopulares(popResponse.data || []);
+      setImpactoNoticias(impactoResponse.data || []);
+      setNoticiasVista(noticiasResponse.data || []);
     } catch (error) {
       console.error('Error fetching analytics:', error);
     } finally {
@@ -494,6 +499,112 @@ export const Analitica = () => {
               </div>
             </div>
           </div>
+
+          {/* Cobertura de Noticias por Sector + Impacto de Noticias */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            {/* Panel: Cobertura de Noticias por Sector — Grouped Bar Chart */}
+            <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
+              <div className="flex flex-col gap-2">
+                <h3 className="text-lg font-bold text-white tracking-tight">Cobertura de Noticias por Sector</h3>
+                <div className="flex items-center gap-3 text-[9px] font-bold tracking-widest text-zinc-500">
+                  <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-green-500 inline-block"/>Bullish</span>
+                  <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-red-500 inline-block"/>Bearish</span>
+                  <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-[#D4AF37] inline-block"/>Neutral</span>
+                </div>
+              </div>
+              {loading ? (
+                <div className="h-[220px] flex items-end justify-between gap-2">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="flex-1 flex flex-col gap-1">
+                      <div className="bg-white/5 rounded-sm animate-pulse" style={{ height: `${30 + i * 15}px` }} />
+                      <div className="bg-white/5 rounded-sm animate-pulse" style={{ height: `${20 + i * 10}px` }} />
+                      <div className="bg-white/5 rounded-sm animate-pulse" style={{ height: `${10 + i * 8}px` }} />
+                    </div>
+                  ))}
+                </div>
+              ) : noticiasVista.length > 0 ? (() => {
+                // Pivot: group by sector, aggregate sentimientos — top 5 por volumen total
+                const sectors = [...new Set(noticiasVista.map((r: any) => r.sector))];
+                const allData = sectors.map(sector => {
+                  const rows = noticiasVista.filter((r: any) => r.sector === sector);
+                  const get = (sent: string) => Number(rows.find((r: any) => r.sentimiento === sent)?.volumen_noticias || 0);
+                  const total = rows.reduce((acc: number, r: any) => acc + Number(r.volumen_noticias || 0), 0);
+                  const label = (sector as string)?.length > 7 ? (sector as string).substring(0, 6) + '…' : sector;
+                  return { sector: label, Bullish: get('Bullish'), Bearish: get('Bearish'), Neutral: get('Neutral'), total };
+                });
+                const chartData = allData.sort((a, b) => b.total - a.total).slice(0, 5);
+                return (
+                  <div className="h-[220px] w-full">
+                    <ChartContainer
+                      config={{ Bullish: { label: 'Bullish', color: '#22c55e' }, Bearish: { label: 'Bearish', color: '#ef4444' }, Neutral: { label: 'Neutral', color: '#D4AF37' } }}
+                      className="h-full w-full [&_.recharts-cartesian-axis-tick_text]:fill-zinc-600"
+                    >
+                      <BarChart data={chartData} margin={{ top: 4, right: 4, left: -28, bottom: 16 }} barCategoryGap="28%">
+                        <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.03)" />
+                        <XAxis dataKey="sector" axisLine={false} tickLine={false} tick={{ fill: '#52525b', fontSize: 9 }} interval={0} height={24} />
+                        <YAxis hide domain={[0, 'auto']} />
+                        <ChartTooltip
+                          cursor={{ fill: 'rgba(255,255,255,0.02)' }}
+                          content={<ChartTooltipContent className="bg-[#0c0c0c]/90 backdrop-blur-md border-white/10" />}
+                        />
+                        <Bar dataKey="Bullish" fill="#22c55e" fillOpacity={0.85} radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="Bearish" fill="#ef4444" fillOpacity={0.85} radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="Neutral"  fill="#D4AF37" fillOpacity={0.85} radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ChartContainer>
+                  </div>
+                );
+              })() : (
+                <div className="flex flex-col items-center justify-center py-10 gap-3 opacity-40">
+                  <Activity className="size-7 text-zinc-700" />
+                  <p className="text-xs text-zinc-500">Sin datos de cobertura</p>
+                </div>
+
+              )}
+            </div>
+
+            {/* Panel: Impacto de Noticias en Rendimiento */}
+            <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
+              <h3 className="text-lg font-bold text-white tracking-tight">Impacto de noticias en precios</h3>
+              {loading ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => <div key={i} className="h-16 bg-white/5 rounded-xl animate-pulse" />)}
+                </div>
+              ) : impactoNoticias.length > 0 ? (
+                <div className="space-y-3">
+                  {impactoNoticias.map((item, i) => {
+                    const rend = parseFloat(item.rendimiento_post_noticia || 0);
+                    const isPositive = rend >= 0;
+                    const sentColor = item.sentimiento === 'Bullish' ? '#22c55e' : item.sentimiento === 'Bearish' ? '#ef4444' : '#D4AF37';
+                    return (
+                      <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/10 transition-all">
+                        <div className="flex items-center gap-3">
+                          <div className="size-2.5 rounded-full" style={{ backgroundColor: sentColor }} />
+                          <div>
+                            <p className="text-sm font-bold text-white">{item.sentimiento}</p>
+                            <p className="text-[10px] text-zinc-500">Sentimiento de mercado</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className={`text-lg font-black tabular-nums ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+                            {isPositive ? '+' : ''}{rend.toFixed(2)}%
+                          </p>
+                          <p className="text-[9px] text-zinc-600 font-medium">Rendimiento promedio</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-10 gap-3 opacity-40">
+                  <Sparkles className="size-7 text-zinc-700" />
+                  <p className="text-xs text-zinc-500">Sin datos de impacto</p>
+                </div>
+              )}
+            </div>
+          </div>
+
 
           {/* Análisis por Símbolo / Populares */}
           {rendimientoActivo.length > 0 && simboloBusqueda ? (
