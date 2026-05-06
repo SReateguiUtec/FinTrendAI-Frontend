@@ -61,7 +61,7 @@ export const Analitica = () => {
   const [sectores, setSectores] = useState<any[]>([]);
   const [tendencias, setTendencias] = useState<any[]>([]);
   const [populares, setPopulares] = useState<any[]>([]);
-  const [impactoNoticias, setImpactoNoticias] = useState<any[]>([]);
+  const [alertas, setAlertas] = useState<any[]>([]);
   const [noticiasVista, setNoticiasVista] = useState<any[]>([]);
   const [rendimientoActivo, setRendimientoActivo] = useState<any[]>([]);
 
@@ -113,18 +113,18 @@ export const Analitica = () => {
     setPeriodoSeleccionado(periodo);
     setShowPeriodOptions(false);
     try {
-      const [secData, trendData, popResponse, impactoResponse, noticiasResponse] = await Promise.all([
+      const [secData, trendData, popResponse, alertasResponse, noticiasResponse] = await Promise.all([
         analiticaService.getRendimientoSector(periodo),
         analiticaService.getTendencias(),
         analiticaService.ms5.get('/api/analitica/popularidad-activos'),
-        analiticaService.ms5.get('/api/analitica/impacto-noticias'),
+        analiticaService.ms5.get('/api/analitica/alertas-contradiccion'),
         analiticaService.ms5.get('/api/analitica/rendimiento-detallado'),
       ]);
 
       setSectores(secData || []);
       setTendencias(trendData || []);
       setPopulares(popResponse.data || []);
-      setImpactoNoticias(impactoResponse.data || []);
+      setAlertas(alertasResponse.data || []);
       setNoticiasVista(noticiasResponse.data || []);
     } catch (error) {
       console.error('Error fetching analytics:', error);
@@ -564,33 +564,72 @@ export const Analitica = () => {
               )}
             </div>
 
-            {/* Panel: Impacto de Noticias en Rendimiento */}
+            {/* Panel: Alertas de Contradicción (vista_alertas_contradiccion) */}
             <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
-              <h3 className="text-lg font-bold text-white tracking-tight">Impacto de noticias en precios</h3>
-              {loading ? (
-                <div className="space-y-3">
-                  {[...Array(3)].map((_, i) => <div key={i} className="h-16 bg-white/5 rounded-xl animate-pulse" />)}
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-lg font-bold text-white tracking-tight">Alertas de Contradicción</h3>
+                  <p className="text-[10px] text-zinc-500 font-medium">Alta volatilidad con cobertura positiva · Top 10</p>
                 </div>
-              ) : impactoNoticias.length > 0 ? (
-                <div className="space-y-3">
-                  {impactoNoticias.map((item, i) => {
-                    const rend = parseFloat(item.rendimiento_post_noticia || 0);
-                    const isPositive = rend >= 0;
-                    const sentColor = item.sentimiento === 'Bullish' ? '#22c55e' : item.sentimiento === 'Bearish' ? '#ef4444' : '#D4AF37';
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
+                  <div className="size-1.5 rounded-full bg-amber-400 animate-pulse" />
+                  <span className="text-[9px] font-bold text-amber-400 tracking-widest">LIVE</span>
+                </div>
+              </div>
+              {loading ? (
+                <div className="space-y-2">
+                  {[...Array(5)].map((_, i) => <div key={i} className="h-12 bg-white/5 rounded-xl animate-pulse" />)}
+                </div>
+              ) : alertas.length > 0 ? (
+                <div className="space-y-2 max-h-[260px] overflow-y-auto custom-scrollbar pr-1">
+                  {alertas.map((a: any, i: number) => {
+                    const vol = parseFloat(a.volatilidad_promedio || 0);
+                    const bullish = Number(a.noticias_bullish || 0);
+                    const bearish = Number(a.noticias_bearish || 0);
+                    const total = Number(a.total_noticias || 1);
+                    const maxVol = Math.max(...alertas.map((x: any) => parseFloat(x.volatilidad_promedio || 0)));
+                    const volPct = maxVol > 0 ? (vol / maxVol) * 100 : 0;
+                    // Contradicción: alta volatilidad + mayoría de noticias bullish
+                    const esContradiccion = bullish > bearish && vol > (maxVol * 0.5);
                     return (
-                      <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/10 transition-all">
-                        <div className="flex items-center gap-3">
-                          <div className="size-2.5 rounded-full" style={{ backgroundColor: sentColor }} />
-                          <div>
-                            <p className="text-sm font-bold text-white">{item.sentimiento}</p>
-                            <p className="text-[10px] text-zinc-500">Sentimiento de mercado</p>
+                      <div key={i} className={cn(
+                        "relative p-3 rounded-xl border transition-all group/alert",
+                        esContradiccion
+                          ? "bg-amber-500/5 border-amber-500/20 hover:border-amber-500/40"
+                          : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                      )}>
+                        <div className="flex items-center justify-between gap-3 mb-2">
+                          <div className="flex items-center gap-2">
+                            {esContradiccion && (
+                              <span className="text-[8px] font-black tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                                ⚠ ALERTA
+                              </span>
+                            )}
+                            <span className="text-sm font-black text-white tracking-tight">{a.simbolo}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20">
+                              {bullish}B↑
+                            </span>
+                            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
+                              {bearish}B↓
+                            </span>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className={`text-lg font-black tabular-nums ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
-                            {isPositive ? '+' : ''}{rend.toFixed(2)}%
-                          </p>
-                          <p className="text-[9px] text-zinc-600 font-medium">Rendimiento promedio</p>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-700"
+                              style={{
+                                width: `${volPct}%`,
+                                backgroundColor: esContradiccion ? '#f59e0b' : '#D4AF37',
+                                opacity: 0.8
+                              }}
+                            />
+                          </div>
+                          <span className="text-[10px] font-bold tabular-nums text-zinc-400 w-12 text-right">
+                            {vol.toFixed(2)}%
+                          </span>
                         </div>
                       </div>
                     );
@@ -599,11 +638,12 @@ export const Analitica = () => {
               ) : (
                 <div className="flex flex-col items-center justify-center py-10 gap-3 opacity-40">
                   <Sparkles className="size-7 text-zinc-700" />
-                  <p className="text-xs text-zinc-500">Sin datos de impacto</p>
+                  <p className="text-xs text-zinc-500">Sin datos de alertas</p>
                 </div>
               )}
             </div>
           </div>
+
 
 
           {/* Análisis por Símbolo / Populares */}
