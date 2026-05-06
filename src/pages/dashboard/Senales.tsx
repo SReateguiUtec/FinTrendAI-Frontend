@@ -145,7 +145,7 @@ export const Senales = () => {
     try {
       const fin = new Date();
       const inicio = new Date();
-      inicio.setDate(fin.getDate() - 15);
+      inicio.setDate(fin.getDate() - 30);
 
       await ms2.get(`/api/precios/${s}/range?inicio=${inicio.toISOString().split('.')[0]}&fin=${fin.toISOString().split('.')[0]}`);
       setCurrentStep(1);
@@ -362,9 +362,6 @@ export const Senales = () => {
                   </div>
                   <div>
                     <h2 className="text-xl font-bold">{resultado.simbolo}</h2>
-                    <p className="text-xs text-zinc-500">
-                      {resultado.precios_disponibles.toLocaleString()} precios analizados en el período
-                    </p>
                   </div>
                 </div>
               </div>
@@ -377,11 +374,11 @@ export const Senales = () => {
                 { label: 'Confianza', value: `${resultado.confianza}%`, hint: 'Score 0–100' },
                 {
                   label: 'Variación precio',
-                  value: `${resultado.variacion_precio >= 0 ? '+' : ''}${resultado.variacion_precio}%`,
+                  value: `${(resultado.variacion_precio ?? 0) >= 0 ? '+' : ''}${(resultado.variacion_precio ?? 0).toFixed(2)}%`,
                   hint: 'vs. vela anterior',
-                  color: resultado.variacion_precio >= 0 ? 'text-emerald-400' : 'text-red-400',
+                  color: (resultado.variacion_precio ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400',
                 },
-                { label: 'Sentimiento', value: resultado.sentimiento, hint: 'Últimas 10 noticias' },
+                { label: 'Sentimiento', value: resultado.sentimiento ?? 'Neutral', hint: 'Últimas 10 noticias' },
               ].map(({ label, value, hint, color }) => (
                 <div key={label} className="p-4 rounded-xl bg-white/5 border border-white/5 space-y-1">
                   <p className="text-[10px] uppercase font-bold tracking-widest text-zinc-500">{label}</p>

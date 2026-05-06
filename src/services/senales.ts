@@ -13,9 +13,9 @@ export interface Senal {
   senal: TipoSenal;
   confianza: number;
   mensaje: string;
-  sentimiento: string;
-  variacion_precio: number;
-  precios_disponibles: number;
+  sentimiento?: string;
+  variacion_precio?: number;
+  precios_disponibles?: number;
 }
 
 export async function getSenal(simbolo: string): Promise<Senal> {
