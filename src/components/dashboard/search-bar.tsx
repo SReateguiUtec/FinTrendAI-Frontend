@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Zap, Newspaper, LineChart, ArrowUpRight, TrendingUp, BarChart3 } from 'lucide-react';
+import { Search, Zap, Newspaper, LineChart, ArrowUpRight, TrendingUp, BarChart3, Monitor } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getSimbolos } from '@/services/precios';
 
 const QUICK_SYMBOLS = ['AAPL', 'NVDA', 'MSFT', 'GOOGL', 'TSLA', 'AMZN', 'META'];
 
 const SECTIONS = [
+  { label: 'Mission Control', path: '/dashboard/mission-control', icon: Monitor, desc: 'Centro de mando del mercado en tiempo real' },
   { label: 'Vista general',  path: '/dashboard',           icon: BarChart3,  desc: 'Resumen del mercado y portafolio' },
   { label: 'Seguimiento',    path: '/dashboard/seguimiento', icon: LineChart,  desc: 'Rastrea tus activos en tiempo real' },
   { label: 'Señales IA',     path: '/dashboard/senales',    icon: Zap,        desc: 'Recomendaciones de compra/venta' },

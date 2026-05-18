@@ -28,6 +28,26 @@ export interface TendenciaMercado {
   volumen_total: string;
 }
 
+export interface AlertaContradiccion {
+  simbolo: string;
+  volatilidad_promedio: string;
+  noticias_bullish: string;
+  noticias_bearish: string;
+  total_noticias: string;
+}
+
+export interface PopularidadActivo {
+  simbolo: string;
+  menciones: number | string;
+  estrategias: string;
+}
+
+export interface RendimientoDetallado {
+  sector: string;
+  sentimiento: string;
+  volumen_noticias: string;
+}
+
 export async function getRendimientoSector(periodo: string = '30d'): Promise<RendimientoSector[]> {
   const { data } = await ms5.get<RendimientoSector[]>('/api/analitica/rendimiento-sector', {
     params: { periodo }
@@ -44,6 +64,21 @@ export async function getRendimientoSimbolo(simbolo: string): Promise<Rendimient
 
 export async function getTendencias(): Promise<TendenciaMercado[]> {
   const { data } = await ms5.get<TendenciaMercado[]>('/api/analitica/tendencias');
+  return data;
+}
+
+export async function getAlertasContradiccion(): Promise<AlertaContradiccion[]> {
+  const { data } = await ms5.get<AlertaContradiccion[]>('/api/analitica/alertas-contradiccion');
+  return data;
+}
+
+export async function getPopularidadActivos(): Promise<PopularidadActivo[]> {
+  const { data } = await ms5.get<PopularidadActivo[]>('/api/analitica/popularidad-activos');
+  return data;
+}
+
+export async function getRendimientoDetallado(): Promise<RendimientoDetallado[]> {
+  const { data } = await ms5.get<RendimientoDetallado[]>('/api/analitica/rendimiento-detallado');
   return data;
 }
 

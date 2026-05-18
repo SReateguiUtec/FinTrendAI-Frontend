@@ -7,6 +7,7 @@ import {
   Zap,
   Newspaper,
   Home,
+  Monitor,
   X,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
@@ -208,6 +209,7 @@ function MarketClock() {
 }
 
 const navItems = [
+  { icon: Monitor, label: "Mission Control", path: "/dashboard/mission-control" },
   { icon: LayoutDashboard, label: "Vista general", path: "/dashboard" },
   { icon: LineChart, label: "Seguimiento", path: "/dashboard/seguimiento" },
   { icon: BarChart3, label: "Analítica", path: "/dashboard/analitica" },

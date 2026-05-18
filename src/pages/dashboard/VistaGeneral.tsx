@@ -143,8 +143,9 @@ export const VistaGeneral = () => {
             transition={{ delay: 0.2 }}
             className="text-[10px] sm:text-xs text-zinc-500 font-bold uppercase tracking-[0.3em] pl-4"
           >
-            Terminal Operativa · Sistema de Análisis Global
+            Sistema de Análisis Global
           </motion.p>
+
         </div>
 
         <div className="flex items-center gap-4">
@@ -215,7 +216,10 @@ export const VistaGeneral = () => {
 
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-6 px-8 py-4 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/5 z-20">
             <div className="flex items-center gap-3">
-              <div className="size-2 rounded-full bg-emerald-500 animate-ping" />
+              <div className="relative flex items-center justify-center size-3">
+                <div className="absolute inline-flex size-full rounded-full bg-emerald-500 opacity-40 animate-ping" />
+                <div className="relative size-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]" />
+              </div>
               <span className="text-[10px] font-black text-white uppercase tracking-widest">Transacciones Live</span>
             </div>
             <div className="h-4 w-px bg-white/10" />

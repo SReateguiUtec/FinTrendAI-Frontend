@@ -9,6 +9,7 @@ import { Seguimiento } from './dashboard/Seguimiento';
 import { Analitica } from './dashboard/Analitica';
 import { Senales } from './dashboard/Senales';
 import { Noticias } from './dashboard/Noticias';
+import { MissionControl } from './dashboard/MissionControl';
 import { FloatingChatWidget } from '@/components/ui/FloatingChat';
 
 const Dashboard = () => {
@@ -24,6 +25,7 @@ const Dashboard = () => {
         <main className="flex-1 overflow-y-auto custom-scrollbar">
           <Routes>
             <Route index element={<VistaGeneral />} />
+            <Route path="mission-control" element={<MissionControl />} />
             <Route path="seguimiento" element={<Seguimiento />} />
             <Route path="analitica" element={<Analitica />} />
             <Route path="senales" element={<Senales />} />
