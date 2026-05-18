@@ -357,7 +357,7 @@ export const MissionControl = () => {
         <div className="flex-1 flex flex-col gap-2 min-w-0">
 
           {/* Main Chart (Terminal Style - Premium UI) */}
-          <PanelShell title={`${selectedSymbol} 30D CHART`} kicker="MS2 TAPE" className="h-[250px] shrink-0 relative overflow-hidden">
+          <PanelShell title={`${selectedSymbol} 30D CHART`} kicker="PRICE HISTORY" className="h-[250px] shrink-0 relative overflow-hidden">
             {quotes.loading && !historicalData[selectedSymbol] ? <PanelPlaceholder /> : (
               <div className="w-full h-full p-2 relative">
                 {/* Floating Price Badge (Horizon style) */}
@@ -409,7 +409,7 @@ export const MissionControl = () => {
           </PanelShell>
 
           {/* Market Overview */}
-          <PanelShell title="MARKET OVERVIEW" kicker="MS2 TAPE" className="flex-1 min-h-[250px]">
+          <PanelShell title="MARKET OVERVIEW" kicker="LIVE QUOTES" className="flex-1 min-h-[250px]">
             {quotes.error && quotes.data.length === 0 ? <PanelError message={quotes.error} /> :
               quotes.loading && quotes.data.length === 0 ? <PanelPlaceholder /> : (
                 <table className="w-full text-left table-fixed">
@@ -530,7 +530,7 @@ export const MissionControl = () => {
         {/* 3. ALERT RAIL (Franja Lateral) */}
         <div className="w-full lg:w-[320px] flex flex-col gap-2 shrink-0">
 
-          <PanelShell title="SIGNAL BOARD" kicker="MS4 ENGINE" className="flex-1 min-h-[300px]">
+          <PanelShell title="SIGNAL BOARD" kicker="AI SIGNALS" className="flex-1 min-h-[300px]">
             {signals.error && signals.data.length === 0 ? <PanelError message={signals.error} /> :
               signals.loading && signals.data.length === 0 ? <PanelPlaceholder /> : (
                 <div className="flex flex-col gap-2">
@@ -582,7 +582,7 @@ export const MissionControl = () => {
               )}
           </PanelShell>
 
-          <PanelShell title="NEWS PULSE" kicker="MS3 WIRE" className="h-[250px] shrink-0">
+          <PanelShell title="NEWS PULSE" kicker="SENTIMENT FEED" className="h-[250px] shrink-0">
             {news.error && news.data.length === 0 ? <PanelError message={news.error} /> :
               news.loading && news.data.length === 0 ? <PanelPlaceholder /> : (
                 <div className="flex flex-col gap-2">
