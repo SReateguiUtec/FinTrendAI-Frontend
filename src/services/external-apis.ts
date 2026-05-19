@@ -1,8 +1,9 @@
 // src/services/external-apis.ts
 
+import { getUltimasNoticias } from './noticias';
+
 const FINNHUB_KEY = import.meta.env.VITE_FINNHUB_API_KEY || '';
 const POLYGON_KEY = import.meta.env.VITE_POLYGON_API_KEY || '';
-const NEWS_KEY = import.meta.env.VITE_NEWS_API_KEY || '';
 const ALPHA_VANTAGE_KEY = import.meta.env.VITE_ALPHA_VANTAGE_API_KEY || '';
 
 export interface MacroEvent {
@@ -89,21 +90,18 @@ export async function getMarketStatus(): Promise<MarketStatus | null> {
   }
 }
 
+/** Titulares globales vía MS3 (evita CORS de NewsAPI en el navegador en producción). */
 export async function getBreakingNews(): Promise<BreakingNews[]> {
-  if (!NEWS_KEY) throw new Error("Missing VITE_NEWS_API_KEY");
-
   try {
-    const res = await fetch(`https://newsapi.org/v2/top-headlines?category=business&language=en&apiKey=${NEWS_KEY}`);
-    if (!res.ok) throw new Error("NewsAPI error");
-    const data = await res.json();
-    return (data.articles || []).slice(0, 10).map((article: any) => ({
-      title: article.title,
-      source: article.source?.name || 'News',
-      url: article.url,
-      publishedAt: article.publishedAt,
+    const noticias = await getUltimasNoticias(10);
+    return noticias.map((n) => ({
+      title: n.titulo,
+      source: n.fuente || n.simbolo,
+      url: n.url || '#',
+      publishedAt: n.fechaPublicacion ?? n.fecha ?? new Date().toISOString(),
     }));
   } catch (error) {
-    console.error("Error fetching Breaking News", error);
+    console.error("Error fetching Breaking News from MS3", error);
     return [];
   }
 }

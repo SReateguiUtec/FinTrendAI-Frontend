@@ -66,6 +66,9 @@ VITE_MS2_URL=http://localhost:5002
 VITE_MS3_URL=http://localhost:5003
 VITE_MS4_URL=http://localhost:5004
 VITE_MS5_URL=http://localhost:5005
+VITE_FINNHUB_API_KEY=your-finhub-api-key
+VITE_POLYGON_API_KEY=your-polygon-api-key
+VITE_ALPHA_VANTAGE_API_KEY=your-alpha-vantage-api-key
 ```
 
 En desarrollo, Vite expone proxies locales:

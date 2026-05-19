@@ -284,7 +284,7 @@ export const MissionControl = () => {
       setBreakingNews((p: any) => ({ ...p, loading: true }));
       getBreakingNews()
         .then(data => setBreakingNews({ data, loading: false, error: null, updatedAt: Date.now() }))
-        .catch(err => setBreakingNews((p: any) => ({ ...p, loading: false, error: 'NEWSAPI ERR' })));
+        .catch(err => setBreakingNews((p: any) => ({ ...p, loading: false, error: 'FEED ERR' })));
 
       setTopMovers((p: any) => ({ ...p, loading: true }));
       getTopMovers()
@@ -300,24 +300,29 @@ export const MissionControl = () => {
   const signalBySymbol = useMemo(() => new Map(signals.data.map((s) => [s.simbolo, s])), [signals.data]);
 
   return (
-    <div className="flex h-full flex-col bg-black text-amber-500 font-mono text-[11px] leading-tight uppercase selection:bg-amber-500 selection:text-black">
+    <div className="flex min-h-full flex-col bg-black text-amber-500 font-mono text-[11px] leading-tight uppercase selection:bg-amber-500 selection:text-black">
 
       {/* 1. MARKET RIBBON (Franja Superior) */}
       <div className="shrink-0 border-b border-amber-600/30">
-        <div className="flex items-center px-3 py-2 bg-amber-900/10">
-          {/* Left: Market Status */}
-          <div className="flex gap-4 text-[10px] text-amber-600 w-1/3">
-            <span>NY: <span className="text-amber-200">{marketSession.clock}</span></span>
-            <span>PRC: <span className="text-amber-200">{PRICE_REFRESH_MS / 1000}S</span></span>
-            <span>EXT: <span className="text-amber-200">{EXTERNAL_API_REFRESH_MS / 1000}S</span></span>
+        <div className="flex flex-col sm:flex-row sm:items-center px-3 py-2 bg-amber-900/10 gap-1 sm:gap-0">
+          {/* Mobile: title centrado arriba; Desktop: izq/centro/der */}
+          <div className="flex flex-col items-center sm:hidden">
+            <h1 className="text-lg font-bold text-amber-400 tracking-widest">MISSION CONTROL</h1>
+            <span className={cn("font-bold text-xs tracking-widest", marketSession.accent)}>{marketSession.label}</span>
           </div>
-          {/* Center: Title */}
-          <div className="flex flex-col items-center flex-1">
+          {/* Left: Market Status */}
+          <div className="flex gap-3 text-[10px] text-amber-600 sm:w-1/3 justify-center sm:justify-start">
+            <span>NY: <span className="text-amber-200">{marketSession.clock}</span></span>
+            <span className="hidden xs:inline">PRC: <span className="text-amber-200">{PRICE_REFRESH_MS / 1000}S</span></span>
+            <span className="hidden xs:inline">EXT: <span className="text-amber-200">{EXTERNAL_API_REFRESH_MS / 1000}S</span></span>
+          </div>
+          {/* Center: Title (solo desktop) */}
+          <div className="hidden sm:flex flex-col items-center flex-1">
             <h1 className="text-xl font-bold text-amber-400 tracking-widest">MISSION CONTROL</h1>
             <span className={cn("font-bold text-xs tracking-widest", marketSession.accent)}>{marketSession.label}</span>
           </div>
           {/* Right: Signal Summary */}
-          <div className="flex gap-3 text-[10px] w-1/3 justify-end">
+          <div className="flex gap-3 text-[10px] sm:w-1/3 justify-center sm:justify-end">
             <span className="text-emerald-500 font-bold">
               ▲ {signals.data.filter(s => s.senal === 'Compra').length} <span className="text-amber-600 font-normal">BUY</span>
             </span>
@@ -351,13 +356,13 @@ export const MissionControl = () => {
       </div>
 
       {/* Main Layout: Core Grid + Alert Rail */}
-      <div className="flex-1 overflow-y-auto lg:overflow-hidden p-2 flex flex-col lg:flex-row gap-2">
+      <div className="flex-1 overflow-y-auto p-2 flex flex-col lg:flex-row gap-2">
 
         {/* 2. CORE GRID (Franja Central) */}
         <div className="flex-1 flex flex-col gap-2 min-w-0">
 
           {/* Main Chart (Terminal Style - Premium UI) */}
-          <PanelShell title={`${selectedSymbol} 30D CHART`} kicker="PRICE HISTORY" className="h-[250px] shrink-0 relative overflow-hidden">
+          <PanelShell title={`${selectedSymbol} 30D CHART`} kicker="PRICE HISTORY" className="h-[200px] sm:h-[250px] shrink-0 relative overflow-hidden">
             {quotes.loading && !historicalData[selectedSymbol] ? <PanelPlaceholder /> : (
               <div className="w-full h-full p-2 relative">
                 {/* Floating Price Badge (Horizon style) */}
@@ -409,7 +414,7 @@ export const MissionControl = () => {
           </PanelShell>
 
           {/* Market Overview */}
-          <PanelShell title="MARKET OVERVIEW" kicker="LIVE QUOTES" className="flex-1 min-h-[250px]">
+          <PanelShell title="MARKET OVERVIEW" kicker="LIVE QUOTES" className="flex-1 min-h-[180px] sm:min-h-[250px]">
             {quotes.error && quotes.data.length === 0 ? <PanelError message={quotes.error} /> :
               quotes.loading && quotes.data.length === 0 ? <PanelPlaceholder /> : (
                 <table className="w-full text-left table-fixed">
@@ -456,8 +461,8 @@ export const MissionControl = () => {
           </PanelShell>
 
           {/* Bottom Core Grid (Sectors, Trends, Flow) */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 h-auto sm:h-[220px] shrink-0">
-            <PanelShell title="GLOBAL HEADLINES" kicker="NEWSAPI">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 h-auto sm:h-[220px] shrink-0 [&>*]:min-h-[160px] sm:[&>*]:min-h-0">
+            <PanelShell title="GLOBAL HEADLINES" kicker="FINANCIAL FEED">
               {breakingNews.error && breakingNews.data.length === 0 ? <PanelError message={breakingNews.error} /> :
                 breakingNews.loading && breakingNews.data.length === 0 ? <PanelPlaceholder /> :
                   breakingNews.data.length === 0 ? <div className="text-amber-600 p-2">NO HEADLINES</div> : (
@@ -530,7 +535,7 @@ export const MissionControl = () => {
         {/* 3. ALERT RAIL (Franja Lateral) */}
         <div className="w-full lg:w-[320px] flex flex-col gap-2 shrink-0">
 
-          <PanelShell title="SIGNAL BOARD" kicker="AI SIGNALS" className="flex-1 min-h-[300px]">
+          <PanelShell title="SIGNAL BOARD" kicker="AI SIGNALS" className="flex-1 min-h-[220px] sm:min-h-[300px]">
             {signals.error && signals.data.length === 0 ? <PanelError message={signals.error} /> :
               signals.loading && signals.data.length === 0 ? <PanelPlaceholder /> : (
                 <div className="flex flex-col gap-2">
@@ -562,7 +567,7 @@ export const MissionControl = () => {
               )}
           </PanelShell>
 
-          <PanelShell title="GLOBAL TOP MOVERS" kicker="ALPHAVANTAGE" className="h-[200px] shrink-0">
+          <PanelShell title="GLOBAL TOP MOVERS" kicker="ALPHAVANTAGE" className="h-[180px] sm:h-[200px] shrink-0">
             {topMovers.error && topMovers.data.gainers.length === 0 ? <PanelError message={topMovers.error} /> :
               topMovers.loading && topMovers.data.gainers.length === 0 ? <PanelPlaceholder /> : (
                 <div className="flex flex-col gap-1.5">
@@ -582,7 +587,7 @@ export const MissionControl = () => {
               )}
           </PanelShell>
 
-          <PanelShell title="NEWS PULSE" kicker="SENTIMENT FEED" className="h-[250px] shrink-0">
+          <PanelShell title="NEWS PULSE" kicker="SENTIMENT FEED" className="h-[220px] sm:h-[250px] shrink-0">
             {news.error && news.data.length === 0 ? <PanelError message={news.error} /> :
               news.loading && news.data.length === 0 ? <PanelPlaceholder /> : (
                 <div className="flex flex-col gap-2">
