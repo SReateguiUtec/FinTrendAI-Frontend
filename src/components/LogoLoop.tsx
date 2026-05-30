@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import FlatLogoLoop from "@/components/ui/logo-loop";
 
-const LOGO_H_MOBILE = 44;
-const LOGO_H_DESKTOP = 54;
+const LOGO_H_MOBILE = 36;
+const LOGO_H_DESKTOP = 44;
 
 const techLogos = [
   { src: "/AWS Logo.svg", alt: "AWS" },
@@ -25,7 +25,7 @@ export default function LogoLoop() {
   const logos = techLogos.map(({ src, alt }) => ({ src, alt }));
   const [logoHeight, setLogoHeight] = useState(() =>
     typeof window !== "undefined" &&
-    window.matchMedia("(min-width: 768px)").matches
+      window.matchMedia("(min-width: 768px)").matches
       ? LOGO_H_DESKTOP
       : LOGO_H_MOBILE,
   );

@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/announcement';
 
 const githubRepoUrl =
-    (import.meta.env.VITE_GITHUB_URL as string | undefined)?.trim() || 'https://github.com';
+    (import.meta.env.VITE_GITHUB_URL as string | undefined)?.trim() || 'https://github.com/SReateguiUtec/FinTrendAI';
 
 const LANDING_NAV_SECTIONS: { label: string; id: string }[] = [
     { label: 'Features', id: 'features' },
